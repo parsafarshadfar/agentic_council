@@ -66,7 +66,7 @@ Providers that support live model discovery (OpenRouter, Groq, Together AI, Sili
 
 You can mix models from different providers freely — e.g., one agent on Claude, another on Grok, another on a local Ollama endpoint — within a single session.
 
-**Tip: Using OpenRouter is highly recommended. Purchasing OpenRouter credit provides unified access to all major models, which is far simpler than subscribing to and paying for each provider individually.**
+**Tip: Using OpenRouter is highly recommended. Purchasing OpenRouter credit provides unified access to all major models, which is far simpler than subscribing to and paying for each AI model individually.**
 
 ---
 
