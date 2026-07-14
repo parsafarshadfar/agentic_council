@@ -50,16 +50,16 @@ export function AspectGate({ onError }: { onError: (message: string, details?: s
             <label>Weight
               <input type="number" min="0.25" max="3" step="0.25" value={aspect.weight} onChange={(event) => update(aspect.id, { weight: Number(event.target.value) })} />
             </label>
-            <button type="button" className="icon-button" disabled={aspects.length <= 2} onClick={() => setAspects((items) => items.filter((item) => item.id !== aspect.id))} aria-label={`Delete ${aspect.name}`}><Trash2 size={16} /></button>
+            <button type="button" className="icon-button" disabled={aspects.length <= 3} onClick={() => setAspects((items) => items.filter((item) => item.id !== aspect.id))} aria-label={`Delete ${aspect.name}`}><Trash2 size={16} /></button>
           </article>
         ))}
-        {aspects.length < 8 && <button type="button" className="add-aspect" onClick={add}><Plus size={16} />Add evaluation aspect</button>}
+        {aspects.length < 5 && <button type="button" className="add-aspect" onClick={add}><Plus size={16} />Add evaluation aspect</button>}
       </div>
 
       <footer className="gate-actions">
         <button className="button secondary" type="button" onClick={() => void reject()}><ArrowLeft size={16} />Stop & revise</button>
         <span>{aspects.length} aspects • weighted scoring</span>
-        <button className="button primary" type="button" disabled={aspects.some((aspect) => !aspect.name.trim())} onClick={() => void approve()}><Check size={16} />Approve council brief</button>
+        <button className="button primary" type="button" disabled={aspects.length < 3 || aspects.length > 5 || aspects.some((aspect) => !aspect.name.trim())} onClick={() => void approve()}><Check size={16} />Approve council brief</button>
       </footer>
     </section>
   );

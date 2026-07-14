@@ -4,7 +4,7 @@ use crate::{
     providers::{discover_models, make_provider},
     report,
     security::{sanitize_prompt_for_log, validate_endpoint},
-    state::AppState,
+    state::{AppPaths, AppState},
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -13,7 +13,7 @@ use std::{
     path::PathBuf,
     time::Duration,
 };
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tokio_util::sync::CancellationToken;
 
 type CommandResult<T> = Result<T, String>;
@@ -755,7 +755,10 @@ pub fn discard_checkpoint(state: State<'_, AppState>) -> CommandResult<Bootstrap
 }
 
 #[tauri::command]
-pub async fn hard_clear(state: State<'_, AppState>) -> CommandResult<BootstrapPayload> {
+pub async fn hard_clear(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> CommandResult<BootstrapPayload> {
     state.cancel();
     if let Some(mut handle) = state.take_active_round()
         && tokio::time::timeout(Duration::from_secs(5), &mut handle)
@@ -780,10 +783,12 @@ pub async fn hard_clear(state: State<'_, AppState>) -> CommandResult<BootstrapPa
     })
     .await
     .map_err(|error| error.to_string())??;
-    clear_directory(&state.paths().data_dir)?;
-    clear_directory(&state.paths().cache_dir)?;
-    fs::create_dir_all(&state.paths().temp_dir).map_err(|error| error.to_string())?;
-    fs::create_dir_all(&state.paths().logs_dir).map_err(|error| error.to_string())?;
+    clear_app_owned_data(state.paths())?;
+    for webview in app.webview_windows().into_values() {
+        webview.clear_all_browsing_data().map_err(|error| {
+            format!("Could not clear the embedded browser's local data: {error}")
+        })?;
+    }
     state.reset_catalogs();
     Ok(state.reset())
 }
@@ -859,8 +864,8 @@ fn validate_attachment_capabilities(
 }
 
 fn validate_aspects(aspects: &[Aspect]) -> CommandResult<()> {
-    if !(2..=8).contains(&aspects.len()) {
-        return Err("Use between two and eight evaluation aspects.".into());
+    if !(3..=5).contains(&aspects.len()) {
+        return Err("Use between three and five evaluation aspects.".into());
     }
     let mut names = HashSet::new();
     for aspect in aspects {
@@ -927,9 +932,67 @@ fn clear_directory(path: &PathBuf) -> CommandResult<()> {
         .map_err(|error| format!("Could not recreate {}: {error}", path.display()))
 }
 
+/// Clear only the files Agentic Council owns. On Windows, Tauri resolves the
+/// app-local-data and app-cache roots to the same directory, which also hosts
+/// the live WebView2 profile. Removing that root while the app is running
+/// fails with ERROR_SHARING_VIOLATION and risks deleting browser runtime data.
+fn clear_app_owned_data(paths: &AppPaths) -> CommandResult<()> {
+    for path in [
+        &paths.checkpoint,
+        &paths.providers,
+        &paths.models,
+        &paths.personas,
+    ] {
+        remove_file_if_present(path)?;
+    }
+    clear_directory(&paths.temp_dir)?;
+    clear_log_directory(&paths.logs_dir)
+}
+
+fn remove_file_if_present(path: &PathBuf) -> CommandResult<()> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("Could not clear {}: {error}", path.display())),
+    }
+}
+
+fn clear_log_directory(path: &PathBuf) -> CommandResult<()> {
+    fs::create_dir_all(path)
+        .map_err(|error| format!("Could not access {}: {error}", path.display()))?;
+    for entry in fs::read_dir(path)
+        .map_err(|error| format!("Could not inspect {}: {error}", path.display()))?
+    {
+        let entry = entry.map_err(|error| format!("Could not inspect log entry: {error}"))?;
+        let entry_path = entry.path();
+        if entry_path.is_dir() {
+            fs::remove_dir_all(&entry_path)
+                .map_err(|error| format!("Could not clear {}: {error}", entry_path.display()))?;
+            continue;
+        }
+        if let Err(remove_error) = fs::remove_file(&entry_path) {
+            // The active tracing file is held open on Windows. Its handle
+            // permits writes but not deletion, so truncate it in place.
+            fs::OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open(&entry_path)
+                .map_err(|truncate_error| {
+                    format!(
+                        "Could not clear {}: {remove_error}; truncation also failed: {truncate_error}",
+                        entry_path.display()
+                    )
+                })?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::spawn_on_tauri_runtime;
+    use super::{clear_app_owned_data, spawn_on_tauri_runtime};
+    use crate::state::AppPaths;
+    use std::fs;
 
     #[test]
     fn background_work_can_spawn_without_an_entered_tokio_runtime() {
@@ -940,5 +1003,31 @@ mod tests {
             .expect("task spawned through Tauri's runtime should complete");
 
         assert_eq!(output, 42);
+    }
+
+    #[test]
+    fn hard_clear_preserves_the_live_runtime_root() {
+        let root = std::env::temp_dir().join(format!(
+            "agentic-council-clear-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let paths = AppPaths::new(root.clone(), root.clone()).unwrap();
+        fs::write(&paths.checkpoint, b"session").unwrap();
+        fs::write(&paths.providers, b"providers").unwrap();
+        fs::write(paths.temp_dir.join("extract.txt"), b"content").unwrap();
+        fs::write(paths.logs_dir.join("old.log"), b"diagnostics").unwrap();
+        let webview_dir = root.join("EBWebView");
+        fs::create_dir_all(&webview_dir).unwrap();
+        fs::write(webview_dir.join("lockfile"), b"runtime").unwrap();
+
+        clear_app_owned_data(&paths).unwrap();
+
+        assert!(root.exists());
+        assert!(webview_dir.join("lockfile").exists());
+        assert!(!paths.checkpoint.exists());
+        assert!(!paths.providers.exists());
+        assert!(!paths.temp_dir.join("extract.txt").exists());
+        assert!(!paths.logs_dir.join("old.log").exists());
+        let _ = fs::remove_dir_all(root);
     }
 }

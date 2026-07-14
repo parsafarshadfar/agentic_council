@@ -417,7 +417,7 @@ export class DemoBackend {
   }
 
   private approveAspects(aspects: Aspect[]) {
-    if (aspects.length < 2 || aspects.length > 8) throw new Error("Use between 2 and 8 discussion aspects.");
+    if (aspects.length < 3 || aspects.length > 5) throw new Error("Use between 3 and 5 discussion aspects.");
     this.payload.session.aspects = clone(aspects);
     this.payload.session.phase = "post_round";
     return this.snapshot();

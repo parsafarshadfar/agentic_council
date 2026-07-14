@@ -20,9 +20,7 @@ Run the scripts from a complete download or clone of this repository. They check
 The first launch commonly takes **10–20 minutes** because the Rust backend is compiled locally. Later launches are usually much faster, although changed code may be recompiled. Keep the installer terminal open while the app is running; closing it stops the development process. Re-run the same script whenever you want to launch the app again.
 
 These scripts run the project from source; they do not install a packaged desktop application or create a Start menu shortcut. Release packages are configured separately as described under [Release packaging](#release-packaging).
-
-For detailed step-by-step instructions and a troubleshooting table, see **[INSTALL.md](INSTALL.md)**.
-
+ 
 ---
 
 ## What the app does

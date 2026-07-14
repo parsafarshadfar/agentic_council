@@ -7,8 +7,6 @@ use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Clone)]
 pub struct AppPaths {
-    pub data_dir: PathBuf,
-    pub cache_dir: PathBuf,
     pub temp_dir: PathBuf,
     pub checkpoint: PathBuf,
     pub providers: PathBuf,
@@ -30,8 +28,6 @@ impl AppPaths {
             providers: data_dir.join("providers.json"),
             models: data_dir.join("models.json"),
             personas: data_dir.join("personas.json"),
-            data_dir,
-            cache_dir,
             temp_dir,
             logs_dir,
         })
