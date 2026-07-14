@@ -280,9 +280,9 @@ function ScoreBoard({ round, agents, selected, onSelect }: { round: RoundRecord;
           </table>
           {breakdown && (
             <div className="vote-breakdown">
-              <header><div><span>VOTE BREAKDOWN</span><strong>{selectedAgent ? councilorLabel(selectedAgent.display_name) : "Unknown councilor"} • {selectedAspect?.name}</strong></div><b>{breakdown.median.toFixed(1)}<small>/ 10</small></b></header>
+              <header><div><span>Final Score Breakdown</span><strong>{selectedAgent ? councilorLabel(selectedAgent.display_name) : "Unknown councilor"} • {selectedAspect?.name}</strong></div><b>{breakdown.median.toFixed(1)}<small>/ 10</small></b></header>
               {breakdown.votes.length === 0 ? <p>No eligible peer votes.</p> : breakdown.votes.map((vote, index) => { const voterLabel = councilorLabel(vote.voter_alias); return <div key={`${vote.voter_alias}-${index}`}><span title={voterLabel}>{voterLabel}</span><div><i style={{ width: `${vote.score * 10}%` }} /></div><b>{vote.score.toFixed(1)} / 10</b>{vote.outlier && <em>outlier</em>}</div>; })}
-              <small>Models see anonymous responses and cannot score themselves. You can see which model cast every vote.</small>
+              <small>Final score for each aspect of a councilor's answer is the median of the votes given by all other councilors. Councilors review and score anonymized answers and never score their own response.</small>
             </div>
           )}
         </div>
