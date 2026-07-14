@@ -1,6 +1,9 @@
 # Agentic Council
 
-A private, local-first Windows and macOS desktop application for structured multi-model AI deliberation. You assemble a council of AI agents — each running on a different model or provider — give them a topic, and let them debate it across multiple rounds. The app enforces independence, contradiction analysis, anonymized peer scoring, and automatic session recovery, all without sending any data anywhere except the LLM provider APIs you explicitly configure.
+**Your APIs. Your Rules.**  
+*The Open-Source Alternative to the Premium Multi-Model Brainstorming feature of Perplexity.*
+
+Put your hardest question on the table. Agentic Council is a private, cross-platform desktop application for **multi-model AI brainstorming**. You assemble a council of AI agents, each running on a different model or provider, and watch them independently generate, **critique, and challenge each other's reasoning** in real-time across multiple debate rounds. The app enforces strict independence, contradiction analysis, anonymized peer scoring, and automatic session recovery—all without sending any data anywhere except the LLM provider APIs you explicitly configure.
 
 ---
 
@@ -8,8 +11,8 @@ A private, local-first Windows and macOS desktop application for structured mult
 
 | Platform | What to do |
 |---|---|
-| **Windows** | Right-click **`install.bat`** → **Run as administrator** |
-| **macOS** | Open Terminal, type `bash ` then drag **`install.sh`** into the window, press Enter |
+| **Windows** | Double-click **`install.bat`** |
+| **macOS** | Open Terminal, type `bash `, drag **`install.sh`** into the window, then press Enter |
 
 The scripts automatically install Node.js, Rust, the necessary build tools, and all dependencies, then compile and launch the app. **First launch takes 10–20 minutes** because the Rust backend is compiled on your machine; every subsequent launch is instant.
 
@@ -87,7 +90,7 @@ You can mix models from different providers freely — e.g., one agent on Claude
 The Orchestrator scores the prompt's information density and flags ambiguity. If the ambiguity score crosses a threshold, it pauses and asks the user targeted follow-up questions. This loop repeats until the objective is clear, avoiding wasted API spend on vague prompts.
 
 **Phase 2 — Aspect configuration and user gate**
-The Orchestrator outputs 3–5 structured discussion aspects (e.g., Scalability, Security, Regulatory Compliance). The user must explicitly approve, reject, or edit them before any agent generation begins. Thumbs down returns the session to prompt editing without spending any tokens.
+The Orchestrator outputs 3–5 structured discussion aspects (e.g., Scalability, Security, Regulatory Compliance). The user must explicitly approve, reject, or edit them before any agent generation begins. 
 
 **Phase 3 — The round loop**
 Parallel generation → contradiction analysis → friction injection → peer scoring (described above). After each round the lifecycle pauses at the Post-Round Command Center.

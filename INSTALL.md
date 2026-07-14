@@ -21,11 +21,10 @@ Your computer needs an **internet connection** for the first setup only.
 
 ### One-time setup
 
-1. Right-click **`install.bat`** in this folder.
-2. Choose **"Run as administrator"**.
-3. If Windows asks _"Do you want to allow this app to make changes?"_ — click **Yes**.
-4. A black window will appear and show progress. **Leave it open.**
-5. When the app window appears, setup is complete! 🎉
+1. Double-click **`install.bat`** in this folder.
+2. A black window will appear and show progress. **Leave it open.**
+3. If Windows asks _"Do you want to allow this app to make changes?"_ while installing Microsoft C++ Build Tools, click **Yes**.
+4. When the app window appears, setup is complete! 🎉
 
 > **Tip:** If you see a blue "Windows protected your PC" screen, click **"More info"**  
 > then **"Run anyway"**. This happens because the script isn't signed.
@@ -42,19 +41,16 @@ goes straight to launching the app (takes a few seconds).
 ### One-time setup
 
 1. Open **Terminal** (press `⌘ Space`, type `Terminal`, press Enter).
-2. Copy and paste this command, then press **Enter**:
+2. Type `bash ` (including the space), drag **`install.sh`** from Finder into the Terminal window, and press **Enter**.
+
+   The result will look similar to:
 
    ```
    bash "/path/to/agentic_council/install.sh"
    ```
 
-   Replace `/path/to/agentic_council` with the actual folder path. The easiest way:  
-   type `bash ` (with a space), then **drag the `install.sh` file** from Finder into  
-   the Terminal window, then press **Enter**.
-
-3. If macOS asks for your password, type it (nothing will appear while you type — that's normal) and press Enter.
-4. If a dialog pops up saying **"Install Command Line Developer Tools?"** — click **Install**.
-5. Leave Terminal open until the Agentic Council window appears. 🎉
+3. If a dialog pops up saying **"Install Command Line Developer Tools?"** — click **Install**. The script waits for it to finish.
+4. Leave Terminal open until the Agentic Council window appears. 🎉
 
 ### Subsequent launches
 
@@ -66,8 +62,9 @@ Open Terminal and run the same command — it skips everything already installed
 
 | Problem | Solution |
 |---------|----------|
-| "winget is not recognized" (Windows) | Update Windows. Open Settings → Windows Update → Check for updates. |
-| "Permission denied" (macOS) | Run: `chmod +x install.sh` in Terminal, then try again. |
+| "incomplete Agentic Council folder" | Re-download and fully extract the project. The installer checks required app files before downloading any tools. |
+| A Windows permission prompt appears | Click **Yes**. It is the official Microsoft C++ Build Tools installer. |
+| macOS shows the Command Line Tools dialog | Click **Install** and leave Terminal open. |
 | The window closed before the app appeared | Re-run the installer — it will resume where it left off. |
 | "npm install failed" or "cargo build failed" | Check your internet connection and re-run the installer. |
 
@@ -78,8 +75,9 @@ If the problem persists, please share the text from the installer window with th
 ## 🔒 Is this safe?
 
 - The installer downloads only from official sources:
-  - **Node.js**: from `winget` (Microsoft's official package manager) or `Homebrew`
+  - **Node.js**: from `nodejs.org` (kept in a private Agentic Council tools folder)
   - **Rust**: from `rust-lang.org` (the official Rust website)
+  - **Windows build tools and WebView2**: from Microsoft
   - **npm packages**: from `npmjs.com`
 - No third-party or unverified software is installed.
 - The app itself is **fully offline** — your data never leaves your computer.
