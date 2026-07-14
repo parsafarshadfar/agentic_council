@@ -241,11 +241,6 @@ npm run tauri -- dev
 
 The app starts with the zero-cost offline Local Demo council. Add provider API keys from **Settings**; they are written directly to the OS credential manager and never returned to the webview.
 
-### Browser-only UI preview (no Rust compilation)
-
-```powershell
-npm run dev
-```
 
 ### Verify and build
 
@@ -281,8 +276,6 @@ Release installers are configured for **NSIS** on Windows and **DMG / .app** on 
 
 ## Current limitations
 
-- **Production model catalog:** model IDs and prices in the local catalog are seed data; verify them before paid use. Runtime pricing-catalog updates are not yet signed or published.
 - **Enterprise cloud adapters:** Azure AI Foundry, Amazon Bedrock, and Vertex AI require provider-specific authentication adapters not yet implemented.
 - **OCR:** scanned-PDF OCR is attempted via `pdf-extract`; a high-confidence production OCR model is not bundled.
-- **Code signing / notarization:** required before distributing to end users outside of dev mode; credentials must be supplied externally.
-- **SSRF defense depth:** custom endpoint validation rejects known dangerous destinations; DNS-resolution pinning and redirect re-validation are future hardening items.
+
