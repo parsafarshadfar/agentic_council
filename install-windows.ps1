@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [switch]$ValidateOnly,
-    [switch]$SkipLaunch
+    [switch]$SkipLaunch,
+    [switch]$MaintainCacheOnly
 )
 
 if ($env:AGENTIC_COUNCIL_VALIDATE_ONLY -eq '1') {
@@ -347,6 +348,141 @@ function Assert-CompleteProject {
     }
 }
 
+function Test-CargoCacheLocked {
+    param([Parameter(Mandatory = $true)][string]$DebugRoot)
+
+    foreach ($name in @('.cargo-lock', '.cargo-build-lock', '.cargo-artifact-lock')) {
+        $lockPath = Join-Path $DebugRoot $name
+        if (-not (Test-Path -LiteralPath $lockPath -PathType Leaf)) {
+            continue
+        }
+
+        $stream = $null
+        try {
+            $stream = [IO.File]::Open(
+                $lockPath,
+                [IO.FileMode]::Open,
+                [IO.FileAccess]::ReadWrite,
+                [IO.FileShare]::None
+            )
+        } catch [IO.IOException] {
+            return $true
+        } finally {
+            if ($null -ne $stream) {
+                $stream.Dispose()
+            }
+        }
+    }
+    return $false
+}
+
+function Assert-CachePathIsSafe {
+    param(
+        [Parameter(Mandatory = $true)][string]$Candidate,
+        [Parameter(Mandatory = $true)][string]$TargetRoot
+    )
+
+    $fullCandidate = [IO.Path]::GetFullPath($Candidate)
+    $fullTarget = [IO.Path]::GetFullPath($TargetRoot).TrimEnd(
+        [IO.Path]::DirectorySeparatorChar,
+        [IO.Path]::AltDirectorySeparatorChar
+    )
+    $targetPrefix = $fullTarget + [IO.Path]::DirectorySeparatorChar
+    if (-not $fullCandidate.StartsWith($targetPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to clean a path outside the Cargo target folder: $fullCandidate"
+    }
+}
+
+function Invoke-CargoCacheMaintenance {
+    $targetRoot = [IO.Path]::GetFullPath((Join-Path $ProjectRoot 'src-tauri\target'))
+    $projectPrefix = [IO.Path]::GetFullPath($ProjectRoot).TrimEnd(
+        [IO.Path]::DirectorySeparatorChar,
+        [IO.Path]::AltDirectorySeparatorChar
+    ) + [IO.Path]::DirectorySeparatorChar
+    if (-not $targetRoot.StartsWith($projectPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'The Cargo target folder resolved outside the Agentic Council project.'
+    }
+    if (-not (Test-Path -LiteralPath $targetRoot -PathType Container)) {
+        return
+    }
+
+    $debugRoot = Join-Path $targetRoot 'debug'
+    if ((Test-Path -LiteralPath $debugRoot -PathType Container) -and
+        (Test-CargoCacheLocked -DebugRoot $debugRoot)) {
+        Write-WarningMessage 'Another Cargo build is active; automatic cache maintenance was skipped.'
+        return
+    }
+
+    $directoriesToRemove = @()
+    $incrementalRoot = Join-Path $debugRoot 'incremental'
+    if ((Test-Path -LiteralPath $incrementalRoot -PathType Container) -and
+        @(Get-ChildItem -LiteralPath $incrementalRoot -Force -ErrorAction SilentlyContinue).Count -gt 0) {
+        $directoriesToRemove += $incrementalRoot
+    }
+
+    $depsRoot = Join-Path $debugRoot 'deps'
+    if (Test-Path -LiteralPath $depsRoot -PathType Container) {
+        $directoriesToRemove += @(
+            Get-ChildItem -LiteralPath $depsRoot -Directory -Force -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -like '.tmp*.temp-archive' } |
+                ForEach-Object { $_.FullName }
+        )
+    }
+
+    # Older builds produced mobile-only staticlib/cdylib outputs on desktop.
+    # Remove those exact legacy artifacts once; the desktop rlib is preserved.
+    $legacyRelativePaths = @(
+        'debug\agentic_council_lib.lib',
+        'debug\agentic_council_lib.dll',
+        'debug\agentic_council_lib.dll.exp',
+        'debug\agentic_council_lib.dll.lib',
+        'debug\deps\agentic_council_lib.lib',
+        'debug\deps\agentic_council_lib.dll',
+        'debug\deps\agentic_council_lib.dll.exp',
+        'debug\deps\agentic_council_lib.dll.lib'
+    )
+    $legacyArtifacts = @(
+        $legacyRelativePaths |
+            ForEach-Object { Join-Path $targetRoot $_ } |
+            Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
+    )
+    if ($legacyArtifacts.Count -gt 0) {
+        foreach ($relativePath in @(
+            'debug\agentic_council_lib.pdb',
+            'debug\deps\agentic_council_lib.pdb'
+        )) {
+            $pdbPath = Join-Path $targetRoot $relativePath
+            if (Test-Path -LiteralPath $pdbPath -PathType Leaf) {
+                $legacyArtifacts += $pdbPath
+            }
+        }
+    }
+
+    foreach ($path in $directoriesToRemove) {
+        Assert-CachePathIsSafe -Candidate $path -TargetRoot $targetRoot
+        Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Stop
+    }
+    foreach ($path in $legacyArtifacts) {
+        Assert-CachePathIsSafe -Candidate $path -TargetRoot $targetRoot
+        Remove-Item -LiteralPath $path -Force -ErrorAction Stop
+    }
+
+    if ($directoriesToRemove.Count -gt 0 -or $legacyArtifacts.Count -gt 0) {
+        Write-Ok 'Removed stale Rust incremental, temporary, and legacy desktop build artifacts.'
+    }
+}
+
+if ($MaintainCacheOnly) {
+    try {
+        Set-Location -LiteralPath $ProjectRoot
+        Invoke-CargoCacheMaintenance
+        exit 0
+    } catch {
+        Write-Host $_.Exception.Message -ForegroundColor Red
+        exit 1
+    }
+}
+
 try {
     New-Item -ItemType Directory -Force -Path $script:TempRoot | Out-Null
     Set-Location -LiteralPath $ProjectRoot
@@ -423,6 +559,8 @@ try {
     }
     Write-Ok 'All application dependencies are ready.'
 
+    Invoke-CargoCacheMaintenance
+
     if ($SkipLaunch) {
         Write-Ok 'Setup completed. Launch was skipped as requested.'
         exit 0
@@ -435,6 +573,7 @@ try {
     Write-Host ' Keep this window open while the app is running.'
     Write-Host '========================================================' -ForegroundColor Green
     Write-Host ''
+    $env:CARGO_INCREMENTAL = '0'
     & npm.cmd run tauri -- dev
     if ($LASTEXITCODE -ne 0) {
         throw ("Agentic Council exited with code {0}." -f $LASTEXITCODE)

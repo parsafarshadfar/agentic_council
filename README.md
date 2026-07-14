@@ -5,31 +5,10 @@
 
 Put your hardest question on the table. Agentic Council is a private, cross-platform desktop application for **multi-model AI brainstorming**. You assemble a council of AI agents, each running on a different model or provider, and watch them independently generate, **critique, and challenge each other's reasoning** in real-time across multiple debate rounds. The app enforces strict independence, contradiction analysis, anonymized peer scoring, and automatic session recovery—all without sending any data anywhere except the LLM provider APIs you explicitly configure.
 
----
+## Demo
 
-## Run from source (no technical experience needed)
+![Agentic Council Screenshot](screenshots/agentic_council_screenshot_1.jpg)
 
-| Platform | What to do |
-|---|---|
-| **Windows** | Double-click **`install.bat`** (it safely starts `install-windows.ps1`) |
-| **macOS** | Open Terminal, type `bash `, drag **`install.sh`** into the window, then press Enter |
-| **Linux** | From the project folder, run `bash install.sh` |
-
-Run the scripts from a complete download or clone of this repository. They check for and, when needed, install Node.js, Rust, the platform build prerequisites, and the project dependencies. They then compile and launch the app in **Tauri development mode**. An internet connection is required during initial setup, and Windows may request administrator approval while installing Microsoft's C++ Build Tools.
-
-The first launch commonly takes **10–20 minutes** because the Rust backend is compiled locally. Later launches are usually much faster, although changed code may be recompiled. Keep the installer terminal open while the app is running; closing it stops the development process. Re-run the same script whenever you want to launch the app in development mode again.
-
-These scripts run the project from source; they do not install a packaged desktop application or create a Start menu shortcut. 
-
-### Launching the app after the first setup (Windows)
-
-Once `install.bat` has finished successfully, you can relaunch the app anytime by double-clicking **`run.bat`** instead of re-running the full installer. `run.bat` skips all prerequisite checks and dependency installation — it simply runs `npm run tauri -- dev` in the project folder. Keep the terminal window open while the app is running; closing it stops the app.
-
-### Why `src-tauri/target` gets large
-
-Despite its name, `install.bat` is a setup-and-development launcher, not the installed application. Its final command is `npm run tauri -- dev`. Rust's Cargo compiler stores compiled dependencies, debug symbols, incremental compilation data, and temporary linker files in `src-tauri/target` so later source builds can be faster. This project has several large Rust dependencies, so that cache can reach ~2.5GB in size.
-
-For routine use, prefer a packaged release instead of clicking `install.bat` every time.
 
 
 ## What the app does
@@ -43,7 +22,6 @@ Agentic Council runs a gated, multi-round debate between AI agents. Each round e
 
 ---
 
-## Feature reference
 
 ### Supported providers and models
 
@@ -75,8 +53,6 @@ You can mix models from different providers freely — e.g., one agent on Claude
 
 **Tip: Using OpenRouter is highly recommended. Purchasing OpenRouter credit provides unified access to all major models, which is far simpler than subscribing to and paying for each AI model individually.**
 
----
-
 ### Agent and persona system
 
 - **Minimum quorum:** one Orchestrator and two council members are required to start a session. The UI enforces this and disables the start button with a tooltip explaining why.
@@ -92,8 +68,6 @@ You can mix models from different providers freely — e.g., one agent on Claude
   | **Ethical Guardian** | Assesses long-term consequences, fairness, and resilience |
 - **Custom personas:** create new archetypes by specifying a name, system prompt, and key directives; they are persisted locally and appear alongside built-ins.
 - The Rust backend wraps each agent's prompt with its persona's instruction set before sending it to the provider.
-
----
 
 ### Gated lifecycle (state machine)
 
@@ -123,8 +97,6 @@ Available actions: inject new arguments, update the aspect matrix, export the cu
 **Phase 6 [Final Synthesis]** — 
 The Orchestrator produces a comprehensive comparison summary with historical performance indexes, aggregated score matrices, and an option to export the complete session.
 
----
-
 ### Session import and export
 
 | Format | Description |
@@ -135,15 +107,11 @@ The Orchestrator produces a comprehensive comparison summary with historical per
 
 Exported files are written to the location you choose via a native file picker. No copies are retained by the application after export. The embedded state in Markdown files uses Base64-encoded JSON; imported sessions are validated against the current schema version.
 
----
-
 ### Crash recovery and checkpoint persistence
 
 - Every state-machine transition boundary (after aspect approval, after each round, after scoring) triggers an **atomic checkpoint write** using a write-to-temp-then-rename strategy to prevent corruption from partial writes.
 - On next launch, if an interrupted session is found, a recovery dialog offers: **Resume session** (restores to the last completed boundary) or **Discard and start fresh**.
 - In-flight streams that had not completed at the time of interruption are discarded; the user can re-run that round from the Post-Round Command Center.
-
----
 
 ### Resilience and error handling
 
@@ -151,21 +119,15 @@ Exported files are written to the location you choose via a native file picker. 
 - **Retry Policy:** The app automatically retries transient errors (like network timeouts or rate limits) using exponential backoff.
 - **Diagnostic Logs:** A collapsible session log sanitizes sensitive data (redacting API keys and prompt content) while helping you troubleshoot connection issues.
 
----
-
 ### Document and image ingestion
 
 The app supports importing documents and images (including PDF, TXT, Markdown, CSV, JSON, DOCX, PNG, JPG, and WEBP) directly into the session setup. Standard size and format limits apply, and image inputs are automatically routed to vision-capable models.
-
----
 
 ### Security and credential management
 
 - **Local API Keys:** API keys are stored securely in your OS-native credential manager (Windows Credential Manager / macOS Keychain). They are never written to disk, stored in local storage, or sent to any third party except the direct provider APIs you configure.
 - **SSRF and CSP Controls:** Local network access and webview routing follow strict security boundaries to prevent unauthorized data transmission.
 - **Wipe Data:** A "Wipe Credentials & Clear Cache" option is available in Settings to securely remove all keys, caches, and session history from your local machine.
-
----
 
 ### Token and cost telemetry
 
@@ -177,7 +139,28 @@ A persistent tracker is accessible from the top bar (Usage button). It shows:
 
 ---
 
+## Run from source (no technical experience needed)
 
+| Platform | What to do |
+|---|---|
+| **Windows** | Double-click **`install.bat`** (it safely starts `install-windows.ps1`) |
+| **macOS** | Open Terminal, type `bash `, drag **`install.sh`** into the window, then press Enter |
+| **Linux** | From the project folder, run `bash install.sh` |
+
+Run the scripts from a complete download or clone of this repository. They check for and, when needed, install Node.js, Rust, the platform build prerequisites, and the project dependencies. They then compile and launch the app in **Tauri development mode**. An internet connection is required during initial setup, and Windows may request administrator approval while installing Microsoft's C++ Build Tools.
+
+The first launch commonly takes **10–20 minutes** because the Rust backend is compiled locally. Later launches are usually much faster, although changed code may be recompiled. Keep the installer terminal open while the app is running; closing it stops the development process. Re-run the same script whenever you want to launch the app in development mode again.
+
+These scripts run the project from source; they do not install a packaged desktop application or create a Start menu shortcut. 
+
+### Launching the app after the first setup (Windows)
+
+Once `install.bat` has finished successfully, you can relaunch the app anytime by double-clicking **`run.bat`** instead of re-running the full installer. `run.bat` skips all prerequisite checks and dependency installation — it simply runs `npm run tauri -- dev` in the project folder. Keep the terminal window open while the app is running; closing it stops the app.
+
+Before launching, `run.bat` now performs bounded Cargo-cache maintenance. It removes only disposable incremental generations, incomplete temporary archives, and legacy mobile-library outputs inside `src-tauri/target`; it refuses paths outside that directory and skips maintenance if another Cargo build is active.
+
+
+---
 
 ## Developer reference
 

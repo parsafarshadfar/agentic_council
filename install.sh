@@ -20,6 +20,90 @@ ok()   { printf '  [OK] %s\n' "$*"; }
 info() { printf '  [INFO] %s\n' "$*"; }
 warn() { printf '  [WARNING] %s\n' "$*"; }
 
+directory_has_entries() {
+    local directory="$1"
+    local entry
+    [[ -d "$directory" ]] || return 1
+    for entry in "$directory"/* "$directory"/.[!.]* "$directory"/..?*; do
+        [[ -e "$entry" || -L "$entry" ]] && return 0
+    done
+    return 1
+}
+
+remove_cargo_cache_path() {
+    local path="$1"
+    local target_root="$2"
+    case "$path" in
+        "$target_root"/*) rm -rf -- "$path" ;;
+        *)
+            printf 'Refusing to clean a path outside the Cargo target folder: %s\n' "$path" >&2
+            return 1
+            ;;
+    esac
+}
+
+maintain_cargo_cache() {
+    local target_root="$SCRIPT_DIR/src-tauri/target"
+    local debug_root="$target_root/debug"
+    local incremental_root="$debug_root/incremental"
+    local deps_root="$debug_root/deps"
+    local needs_maintenance=0
+    local path
+    local legacy_artifacts=(
+        "$debug_root/libagentic_council_lib.a"
+        "$debug_root/libagentic_council_lib.so"
+        "$debug_root/libagentic_council_lib.dylib"
+        "$debug_root/libagentic_council_lib.dylib.dSYM"
+        "$deps_root/libagentic_council_lib.a"
+        "$deps_root/libagentic_council_lib.so"
+        "$deps_root/libagentic_council_lib.dylib"
+        "$deps_root/libagentic_council_lib.dylib.dSYM"
+    )
+
+    [[ -d "$target_root" ]] || return 0
+    if directory_has_entries "$incremental_root"; then
+        needs_maintenance=1
+    fi
+    for path in "${legacy_artifacts[@]}"; do
+        if [[ -e "$path" || -L "$path" ]]; then
+            needs_maintenance=1
+            break
+        fi
+    done
+    for path in "$deps_root"/.tmp*.temp-archive; do
+        if [[ -d "$path" ]]; then
+            needs_maintenance=1
+            break
+        fi
+    done
+    (( needs_maintenance == 1 )) || return 0
+
+    info 'Removing stale Rust incremental, temporary, and legacy desktop build artifacts...'
+
+    # Cargo obtains its target lock before removing this package's development
+    # artifacts, so maintenance cannot race an active compilation.
+    cargo clean --manifest-path "$SCRIPT_DIR/src-tauri/Cargo.toml" \
+        --package agentic-council --profile dev --quiet
+
+    # Old crate types and interrupted linker archives may no longer be known to
+    # the current Cargo manifest. Remove only their exact paths after Cargo has
+    # coordinated access to the target directory.
+    if [[ -d "$incremental_root" ]]; then
+        remove_cargo_cache_path "$incremental_root" "$target_root"
+    fi
+    for path in "${legacy_artifacts[@]}"; do
+        if [[ -e "$path" || -L "$path" ]]; then
+            remove_cargo_cache_path "$path" "$target_root"
+        fi
+    done
+    for path in "$deps_root"/.tmp*.temp-archive; do
+        if [[ -d "$path" ]]; then
+            remove_cargo_cache_path "$path" "$target_root"
+        fi
+    done
+    ok 'Rust build-cache maintenance completed.'
+}
+
 pause_on_error() {
     if [[ -t 0 ]]; then
         printf '\nPress Enter to close this window...'
@@ -267,6 +351,9 @@ ok "Rust toolchain manager is ready."
 step "Installing Rust $RUST_TOOLCHAIN..."
 rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --component rustfmt --component clippy
 ok "Rust $RUST_TOOLCHAIN is ready."
+
+export CARGO_INCREMENTAL=0
+maintain_cargo_cache
 
 step "Installing application dependencies..."
 if [[ -f package-lock.json && ! -d node_modules ]]; then

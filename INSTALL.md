@@ -33,9 +33,9 @@ These scripts prepare the source tree and start Tauri in development mode. They 
 
 ### Subsequent launches
 
-Just double-click **`install.bat`** again. It rechecks the prerequisites and dependencies, then launches the app. This is usually much faster than the first run, although changed code may be recompiled.
+Double-click **`run.bat`**. It launches the already-prepared source tree without repeating all prerequisite and dependency checks. It also removes bounded, disposable Rust build-cache leftovers before launch so repeated use does not accumulate incremental generations. Changed Rust code may still be recompiled.
 
-`install.bat` is the recommended Windows entry point. It changes to the project folder and invokes **`install-windows.ps1`** with a process-scoped execution-policy bypass, so you do not need to change your system PowerShell policy.
+Use **`install.bat`** again when setup or dependencies need to be repaired. It changes to the project folder and invokes **`install-windows.ps1`** with a process-scoped execution-policy bypass, so you do not need to change your system PowerShell policy.
 
 ---
 
@@ -57,7 +57,7 @@ Just double-click **`install.bat`** again. It rechecks the prerequisites and dep
 
 ### Subsequent launches
 
-Open Terminal and run the same command — it skips everything already installed.
+Open Terminal and run the same command. Existing tools and dependencies are reused, and `install.sh` performs guarded Cargo-cache maintenance before launching so old incremental and mobile-library artifacts do not accumulate.
 
 ---
 
@@ -70,6 +70,8 @@ bash install.sh
 ```
 
 The script supports Debian/Ubuntu-style systems using `apt-get` and Fedora-style systems using `dnf`. It may request your password through `sudo` to install the required desktop build libraries. Other Linux distributions require manual installation of the [Tauri v2 prerequisites](https://tauri.app/start/prerequisites/).
+
+On later launches, run the same command. The script reuses installed tools and performs the same guarded Cargo-cache maintenance used on macOS.
 
 ---
 
@@ -84,6 +86,7 @@ The script supports Debian/Ubuntu-style systems using `apt-get` and Fedora-style
 | A tool installer/checksum download is invalid | Re-run the latest installer (`install.bat` on Windows or `install.sh` on macOS/Linux). If it still fails after three matched attempts, disable any VPN or antivirus web-download scanning temporarily, allow the host named in the error (`static.rust-lang.org` or `nodejs.org`), or try another network. Do not bypass the checksum check. |
 | The window closed before the app appeared | Re-run the installer — it will resume where it left off. |
 | "npm install failed" or "cargo build failed" | Check your internet connection and re-run the installer. |
+| `src-tauri/target` keeps growing | Use `run.bat` on Windows or the latest `install.sh` on macOS/Linux. They disable large incremental generations and automatically remove cache formats left by older builds. A multi-gigabyte base cache is normal for a source build; use `cargo clean --manifest-path src-tauri/Cargo.toml` for a full reset. |
 
 If the problem persists, please share the text from the installer window with the developer.
 

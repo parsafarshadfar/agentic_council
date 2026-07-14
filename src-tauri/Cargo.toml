@@ -8,7 +8,11 @@ rust-version = "1.92"
 
 [lib]
 name = "agentic_council_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+# This project ships desktop targets only. `staticlib` and `cdylib` are needed
+# by Tauri's iOS/Android targets, but building them on desktop creates very
+# large duplicate archives (several GB on Windows) that the desktop binary
+# never uses.
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -54,6 +58,15 @@ zeroize = "1.8"
 
 [dev-dependencies]
 wiremock = "0.6"
+
+[profile.dev]
+# A source launch is primarily an end-user convenience. Incremental Rust
+# generations are useful while actively editing code, but this crate's
+# generations are hundreds of MB each and can accumulate in synced folders.
+incremental = false
+
+[profile.test]
+incremental = false
 
 [profile.release]
 codegen-units = 1
