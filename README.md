@@ -40,15 +40,15 @@ Agentic Council runs a gated, multi-round debate between AI agents. Each round e
 
 ### Supported providers and models
 
-The built-in catalog covers 17 providers out of the box:
+The built-in catalog covers following providers out of the box:
 
 | Provider | Protocol |
 |---|---|
-| OpenAI | Native (GPT-4.1, o3, …) |
-| Anthropic | Native (Claude Sonnet 4, …) |
-| Google Gemini | Native (Gemini 2.5 Pro, …) |
+| OpenAI | Native (GPT-5.6, …) |
+| Anthropic | Native (Claude Opus, Sonnet, …) |
+| Google Gemini | Native (Gemini 3.1 Pro, …) |
 | DeepSeek | OpenAI-compatible (V4 Flash, V4 Pro) |
-| xAI | OpenAI-compatible (Grok 3) |
+| xAI | OpenAI-compatible (Grok 4.5, …) |
 | OpenRouter | OpenAI-compatible + live model discovery |
 | Groq | OpenAI-compatible + live model discovery |
 | Together AI | OpenAI-compatible + live model discovery |
@@ -61,11 +61,12 @@ The built-in catalog covers 17 providers out of the box:
 | Z.AI | OpenAI-compatible (GLM 5.1) |
 | Inference.net | OpenAI-compatible |
 | Custom OpenAI-compatible | Configurable endpoint and timeout |
-| **Local Demo** | Credential-free offline mode, zero cost |
 
 Providers that support live model discovery (OpenRouter, Groq, Together AI, SiliconFlow, Hugging Face) fetch their full model roster from the provider API and cache it locally. All other providers use a versioned local catalog to guarantee offline availability.
 
 You can mix models from different providers freely — e.g., one agent on Claude, another on Grok, another on a local Ollama endpoint — within a single session.
+
+**Tip: Using OpenRouter is highly recommended. Purchasing OpenRouter credit provides unified access to all major models, which is far simpler than subscribing to and paying for each provider individually.**
 
 ---
 
@@ -74,12 +75,14 @@ You can mix models from different providers freely — e.g., one agent on Claude
 - **Minimum quorum:** one Orchestrator and two council members are required to start a session. The UI enforces this and disables the start button with a tooltip explaining why.
 - **Model clones with distinct personas:** you can assign the same model to multiple agents but differentiate them with different personas, enabling multi-perspective brainstorming from a single API subscription.
 - **Built-in persona library** (six cognitive archetypes):
-  - *Devil's Advocate* — challenges assumptions, probes logic, exposes omissions
-  - *Visionary Product Innovator* — prioritizes UX, simplicity, and disruptive thinking
-  - *First-Principles Simplifier* — decomposes to fundamentals, removes jargon
-  - *Pragmatic Strategist* — analyzes incentives, competitive position, and hidden risk
-  - *Technical Architect* — evaluates design quality, performance, and failure modes
-  - *Ethical Guardian* — assesses long-term consequences, fairness, and resilience
+  | Archetype | Description |
+  | :--- | :--- |
+  | **Devil's Advocate** | Challenges assumptions, probes logic, exposes omissions |
+  | **Visionary Product Innovator** | Prioritizes UX, simplicity, and disruptive thinking |
+  | **First-Principles Simplifier** | Decomposes to fundamentals, removes jargon |
+  | **Pragmatic Strategist** | Analyzes incentives, competitive position, and hidden risk |
+  | **Technical Architect** | Evaluates design quality, performance, and failure modes |
+  | **Ethical Guardian** | Assesses long-term consequences, fairness, and resilience |
 - **Custom personas:** create new archetypes by specifying a name, system prompt, and key directives; they are persisted locally and appear alongside built-ins.
 - The Rust backend wraps each agent's prompt with its persona's instruction set before sending it to the provider.
 
@@ -88,29 +91,29 @@ You can mix models from different providers freely — e.g., one agent on Claude
 ### Gated lifecycle (state machine)
 
 ```
-[Compose] → [Clarify] → [Approve Aspects] → [Round Loop] → [Review] → [Finalized]
+[Clarification] → [Aspect Gate] → [Round Loop] → [Compaction] → [Command Center] → [Final Synthesis]
 ```
 
-**Phase 1 — Pre-session evaluation and clarification**
+**Phase 1 [Clarification]** — 
 The Orchestrator scores the prompt's information density and flags ambiguity. If the ambiguity score crosses a threshold, it pauses and asks the user targeted follow-up questions. This loop repeats until the objective is clear, avoiding wasted API spend on vague prompts.
 
-**Phase 2 — Aspect configuration and user gate**
+**Phase 2 [Aspect Gate]** — 
 The Orchestrator outputs 3–5 structured discussion aspects (e.g., Scalability, Security, Regulatory Compliance). The user must explicitly approve, reject, or edit them before any agent generation begins. 
 
-**Phase 3 — The round loop**
-Parallel generation → contradiction analysis → friction injection → peer scoring (described above). After each round the lifecycle pauses at the Post-Round Command Center.
+**Phase 3 [Round Loop]** — 
+Parallel generation → contradiction analysis → friction injection → Metadata-anonymized peer scoring (described above). After each round the lifecycle pauses at the Post-Round Command Center.
 
-**Phase 4 — Dynamic context compaction**
+**Phase 4 [Dynamic Context Compaction]** — 
 Older rounds are summarized into high-density structural records by a fast model call, replacing raw transcripts. This prevents context window saturation and controls token costs across multi-round sessions.
 
-**Phase 5 — Post-Round Command Center**
+**Phase 5 [Post-Round Review and Command Center]** — 
 After each round the user sees:
 - **Semantic similarity** — string-similarity percentage across agent responses; high similarity signals you need more diverse models or personas.
 - **Consensus level** — score variance across agents; low variance signals general agreement, high variance highlights contested areas.
 
 Available actions: inject new arguments, update the aspect matrix, export the current round, start the next round, or finalize.
 
-**Phase 6 — Final synthesis**
+**Phase 6 [Final Synthesis]** — 
 The Orchestrator produces a comprehensive comparison summary with historical performance indexes, aggregated score matrices, and an option to export the complete session.
 
 ---
@@ -119,9 +122,9 @@ The Orchestrator produces a comprehensive comparison summary with historical per
 
 | Format | Description |
 |---|---|
-| **Export Markdown (.md)** | Engineering-grade log with structured YAML frontmatter, chronological transcripts, agent identities, raw token/latency metadata per response, friction items, and full peer score matrices including individual votes and outlier flags. |
+| **Export Markdown (.md)** | Engineering-grade log with structured YAML frontmatter, chronological transcripts, agent identities, raw token/latency metadata per response, friction items, and full metadata-anonymized peer score matrices including individual votes and outlier flags. |
 | **Export PDF (.pdf)** | Presentation-grade document compiled via the Rust-native Typst engine directly in the backend. Bypasses `window.print()` entirely to guarantee consistent cross-platform layout. Includes all transcript rounds, moderator friction blocks, peer score tables, radar charts, and a final synthesis section. |
-| **Import Markdown** | Upload a previously exported session file to fully restore agent assignments, aspects, compacted history, and all round transcripts. The session can then continue from the exact lifecycle phase it was in. |
+| **Import Markdown (.md)** | Upload a previously exported session file to fully restore agent assignments, aspects, compacted history, and all round transcripts. The session can then continue from the exact lifecycle phase it was in. |
 
 Exported files are written to the location you choose via a native file picker. No copies are retained by the application after export. The embedded state in Markdown files uses Base64-encoded JSON; imported sessions are validated against the current schema version.
 
