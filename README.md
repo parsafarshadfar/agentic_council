@@ -15,13 +15,22 @@ Put your hardest question on the table. Agentic Council is a private, cross-plat
 | **macOS** | Open Terminal, type `bash `, drag **`install.sh`** into the window, then press Enter |
 | **Linux** | From the project folder, run `bash install.sh` |
 
-Run the scripts from a complete download or clone of this repository. They check for and, when needed, install Node.js, Rust, the platform build prerequisites, and the project dependencies. They then compile and launch the app in Tauri development mode. An internet connection is required during initial setup, and Windows may request administrator approval while installing Microsoft's C++ Build Tools.
+Run the scripts from a complete download or clone of this repository. They check for and, when needed, install Node.js, Rust, the platform build prerequisites, and the project dependencies. They then compile and launch the app in **Tauri development mode**. An internet connection is required during initial setup, and Windows may request administrator approval while installing Microsoft's C++ Build Tools.
 
-The first launch commonly takes **10–20 minutes** because the Rust backend is compiled locally. Later launches are usually much faster, although changed code may be recompiled. Keep the installer terminal open while the app is running; closing it stops the development process. Re-run the same script whenever you want to launch the app again.
+The first launch commonly takes **10–20 minutes** because the Rust backend is compiled locally. Later launches are usually much faster, although changed code may be recompiled. Keep the installer terminal open while the app is running; closing it stops the development process. Re-run the same script whenever you want to launch the app in development mode again.
 
-These scripts run the project from source; they do not install a packaged desktop application or create a Start menu shortcut. Release packages are configured separately as described under [Release packaging](#release-packaging).
- 
----
+These scripts run the project from source; they do not install a packaged desktop application or create a Start menu shortcut. 
+
+### Launching the app after the first setup (Windows)
+
+Once `install.bat` has finished successfully, you can relaunch the app anytime by double-clicking **`run.bat`** instead of re-running the full installer. `run.bat` skips all prerequisite checks and dependency installation — it simply runs `npm run tauri -- dev` in the project folder. Keep the terminal window open while the app is running; closing it stops the app.
+
+### Why `src-tauri/target` gets large
+
+Despite its name, `install.bat` is a setup-and-development launcher, not the installed application. Its final command is `npm run tauri -- dev`. Rust's Cargo compiler stores compiled dependencies, debug symbols, incremental compilation data, and temporary linker files in `src-tauri/target` so later source builds can be faster. This project has several large Rust dependencies, so that cache can reach ~2.5GB in size.
+
+For routine use, prefer a packaged release instead of clicking `install.bat` every time.
+
 
 ## What the app does
 
