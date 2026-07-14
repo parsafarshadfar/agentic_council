@@ -178,25 +178,71 @@ if [[ -z "$node_path" ]]; then
     fi
 
     info "Downloading a private Node.js LTS copy for Agentic Council..."
-    checksums="$(curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 \
-        'https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt')"
-    archive="$(printf '%s\n' "$checksums" | awk -v suffix="-${node_platform}-${node_arch}.tar.gz" '$2 ~ suffix "$" { print $2; exit }')"
-    if [[ -z "$archive" ]]; then
-        printf 'Node.js does not provide a download for %s-%s.\n' "$node_platform" "$node_arch" >&2
+    node_base_url='https://nodejs.org/dist/latest-v22.x'
+    checksum_path="$TEMP_DIR/SHASUMS256.txt"
+    node_download_verified=0
+    archive=""
+
+    if ! command -v shasum >/dev/null 2>&1 && ! command -v sha256sum >/dev/null 2>&1; then
+        printf 'A SHA-256 checksum tool is required (shasum on macOS or sha256sum on Linux).\n' >&2
         exit 1
     fi
-    expected_hash="$(printf '%s\n' "$checksums" | awk -v file="$archive" '$2 == file { print $1; exit }')"
-    curl --fail --show-error --location --retry 3 --connect-timeout 20 \
-        "https://nodejs.org/dist/latest-v22.x/$archive" -o "$TEMP_DIR/$archive"
-    if command -v shasum >/dev/null 2>&1; then
-        actual_hash="$(shasum -a 256 "$TEMP_DIR/$archive" | awk '{print $1}')"
-    else
-        actual_hash="$(sha256sum "$TEMP_DIR/$archive" | awk '{print $1}')"
-    fi
-    if [[ "$actual_hash" != "$expected_hash" ]]; then
-        printf 'The Node.js download failed its security checksum.\n' >&2
+
+    # Fetch the checksum list and archive as a pair. The latest-v22.x alias can
+    # briefly point at different CDN cache generations during a Node.js update.
+    for attempt in 1 2 3; do
+        if ! curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 \
+            "$node_base_url/SHASUMS256.txt" -o "$checksum_path"; then
+            if [[ "$attempt" != "3" ]]; then
+                info "Node.js checksum download failed on attempt $attempt; retrying both files..."
+                sleep 2
+                continue
+            fi
+            break
+        fi
+
+        archive="$(awk -v suffix="-${node_platform}-${node_arch}.tar.gz" '$2 ~ suffix "$" { print $2; exit }' "$checksum_path")"
+        expected_hash="$(awk -v file="$archive" '$2 == file { print $1; exit }' "$checksum_path")"
+        if [[ -z "$archive" || ! "$expected_hash" =~ ^[[:xdigit:]]{64}$ ]]; then
+            if [[ "$attempt" != "3" ]]; then
+                info "Node.js checksum response was invalid on attempt $attempt; retrying both files..."
+                sleep 2
+                continue
+            fi
+            break
+        fi
+
+        if ! curl --fail --show-error --location --retry 3 --connect-timeout 20 \
+            "$node_base_url/$archive" -o "$TEMP_DIR/$archive"; then
+            if [[ "$attempt" != "3" ]]; then
+                info "Node.js archive download failed on attempt $attempt; retrying both files..."
+                sleep 2
+                continue
+            fi
+            break
+        fi
+
+        if command -v shasum >/dev/null 2>&1; then
+            actual_hash="$(shasum -a 256 "$TEMP_DIR/$archive" | awk '{print $1}')"
+        else
+            actual_hash="$(sha256sum "$TEMP_DIR/$archive" | awk '{print $1}')"
+        fi
+        if [[ "$actual_hash" == "$expected_hash" ]]; then
+            node_download_verified=1
+            break
+        fi
+        if [[ "$attempt" != "3" ]]; then
+            info "Node.js archive and checksum did not match on attempt $attempt; retrying both files..."
+            sleep 2
+        fi
+    done
+
+    if [[ "$node_download_verified" != "1" ]]; then
+        printf 'Could not download a checksum-verified Node.js archive after 3 matched attempts.\n' >&2
+        printf 'A proxy, VPN, antivirus web shield, or filtered network may be changing downloads from nodejs.org. Try another network, then run this installer again.\n' >&2
         exit 1
     fi
+
     mkdir -p "$TOOLS_ROOT"
     tar -xzf "$TEMP_DIR/$archive" -C "$TOOLS_ROOT"
     node_directory="${archive%.tar.gz}"
