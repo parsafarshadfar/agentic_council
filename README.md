@@ -151,13 +151,15 @@ Run the scripts from a complete download or clone of this repository. They check
 
 The first launch commonly takes **10–20 minutes** because the Rust backend is compiled locally. Later launches are usually much faster, although changed code may be recompiled. Keep the installer terminal open while the app is running; closing it stops the development process. Re-run the same script whenever you want to launch the app in development mode again.
 
-These scripts run the project from source; they do not install a packaged desktop application or create a Start menu shortcut. 
+These scripts run the project from source; they do not install a packaged desktop application or create a Start menu shortcut.
 
 ### Launching the app after the first setup (Windows)
 
 Once `install.bat` has finished successfully, you can relaunch the app anytime by double-clicking **`run.bat`** instead of re-running the full installer. `run.bat` skips all prerequisite checks and dependency installation — it simply runs `npm run tauri -- dev` in the project folder. Keep the terminal window open while the app is running; closing it stops the app.
 
 Before launching, `run.bat` now performs bounded Cargo-cache maintenance. It removes only disposable incremental generations, incomplete temporary archives, and legacy mobile-library outputs inside `src-tauri/target`; it refuses paths outside that directory and skips maintenance if another Cargo build is active.
+
+On macOS and Linux, `install.sh` performs the equivalent guarded maintenance before launching. It lets Cargo coordinate access to the development cache, removes only known disposable paths under `src-tauri/target`, and runs with incremental compilation disabled. Existing compiled dependencies are preserved so unchanged launches remain fast.
 
 
 ---
@@ -172,17 +174,26 @@ Before launching, `run.bat` now performs bounded Cargo-cache maintenance. It rem
 
 The one-click scripts above install or locate these prerequisites automatically. You only need to prepare them yourself when using the manual developer commands below.
 
-### Run locally (dev mode)
+
+### Install dependencies
+
+Run this after cloning the project and whenever `package-lock.json` changes:
 
 ```powershell
 npm ci
+```
+
+### Run locally (development mode)
+
+```powershell
 npm run tauri -- dev
 ```
 
-The app starts with the zero-cost offline Local Demo council. Add provider API keys from **Settings**; they are written directly to the OS credential manager and never returned to the webview.
-
+Add provider API keys from **Settings**. They are stored in the OS credential manager and are never returned to the webview.
 
 ### Verify and build
+
+Run these checks after making changes and before creating a release:
 
 ```powershell
 npm test

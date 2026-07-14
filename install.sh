@@ -80,8 +80,8 @@ maintain_cargo_cache() {
 
     info 'Removing stale Rust incremental, temporary, and legacy desktop build artifacts...'
 
-    # Cargo obtains its target lock before removing this package's development
-    # artifacts, so maintenance cannot race an active compilation.
+    # Cargo waits for an active compilation before removing this package's
+    # development artifacts.
     cargo clean --manifest-path "$SCRIPT_DIR/src-tauri/Cargo.toml" \
         --package agentic-council --profile dev --quiet
 
