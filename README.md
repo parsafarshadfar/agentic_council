@@ -7,14 +7,19 @@ Put your hardest question on the table. Agentic Council is a private, cross-plat
 
 ---
 
-## Quick start (no technical experience needed)
+## Run from source (no technical experience needed)
 
 | Platform | What to do |
 |---|---|
-| **Windows** | Double-click **`install.bat`** |
+| **Windows** | Double-click **`install.bat`** (it safely starts `install-windows.ps1`) |
 | **macOS** | Open Terminal, type `bash `, drag **`install.sh`** into the window, then press Enter |
+| **Linux** | From the project folder, run `bash install.sh` |
 
-The scripts automatically install Node.js, Rust, the necessary build tools, and all dependencies, then compile and launch the app. **First launch takes 10–20 minutes** because the Rust backend is compiled on your machine; every subsequent launch is instant.
+Run the scripts from a complete download or clone of this repository. They check for and, when needed, install Node.js, Rust, the platform build prerequisites, and the project dependencies. They then compile and launch the app in Tauri development mode. An internet connection is required during initial setup, and Windows may request administrator approval while installing Microsoft's C++ Build Tools.
+
+The first launch commonly takes **10–20 minutes** because the Rust backend is compiled locally. Later launches are usually much faster, although changed code may be recompiled. Keep the installer terminal open while the app is running; closing it stops the development process. Re-run the same script whenever you want to launch the app again.
+
+These scripts run the project from source; they do not install a packaged desktop application or create a Start menu shortcut. Release packages are configured separately as described under [Release packaging](#release-packaging).
 
 For detailed step-by-step instructions and a troubleshooting table, see **[INSTALL.md](INSTALL.md)**.
 
@@ -228,14 +233,16 @@ A persistent tracker is accessible from the top bar (Usage button). It shows:
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 22.12+
 - Rust 1.97 (pinned in `rust-toolchain.toml`)
 - Tauri v2 platform prerequisites (see [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/))
+
+The one-click scripts above install or locate these prerequisites automatically. You only need to prepare them yourself when using the manual developer commands below.
 
 ### Run locally (dev mode)
 
 ```powershell
-npm install
+npm ci
 npm run tauri -- dev
 ```
 
@@ -278,4 +285,3 @@ Release installers are configured for **NSIS** on Windows and **DMG / .app** on 
 
 - **Enterprise cloud adapters:** Azure AI Foundry, Amazon Bedrock, and Vertex AI require provider-specific authentication adapters not yet implemented.
 - **OCR:** scanned-PDF OCR is attempted via `pdf-extract`; a high-confidence production OCR model is not bundled.
-
