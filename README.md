@@ -79,10 +79,18 @@ You can mix models from different providers freely — e.g., one agent on Claude
 The Orchestrator scores the prompt's information density and flags ambiguity. If the ambiguity score crosses a threshold, it pauses and asks the user targeted follow-up questions. This loop repeats until the objective is clear, avoiding wasted API spend on vague prompts.
 
 **Phase 2 [Aspect Gate]** — 
-The Orchestrator outputs 3–5 structured discussion aspects (e.g., Scalability, Security, Regulatory Compliance). The user must explicitly approve, reject, or edit them before any agent generation begins. 
+The Orchestrator outputs 3–5 structured discussion aspects (e.g., Scalability, Security, Regulatory Compliance, etc). The user must explicitly approve, reject, or edit them before any agents' debates begins. 
+
+![Agentic Council Screenshot](screenshots/agentic_council_screenshot_2.jpg)
+
+![Agentic Council Screenshot](screenshots/agentic_council_screenshot_3.jpg)
+
+![Agentic Council Screenshot](screenshots/agentic_council_screenshot_4.jpg)
 
 **Phase 3 [Round Loop]** — 
-Parallel generation → contradiction analysis → friction injection → Metadata-anonymized peer scoring (described above). After each round the lifecycle pauses at the Post-Round Command Center.
+Parallel generation → contradiction analysis → friction injection → Metadata-anonymized peer scoring. After each round the lifecycle pauses at the Post-Round Command Center.
+
+![Agentic Council Screenshot](screenshots/agentic_council_screenshot_5.jpg)
 
 **Phase 4 [Dynamic Context Compaction]** — 
 Older rounds are summarized into high-density structural records by a fast model call, replacing raw transcripts. This prevents context window saturation and controls token costs across multi-round sessions.
@@ -91,6 +99,7 @@ Older rounds are summarized into high-density structural records by a fast model
 After each round the user sees:
 - **Semantic similarity** — string-similarity percentage across agent responses; high similarity signals you need more diverse models or personas.
 - **Consensus level** — score variance across agents; low variance signals general agreement, high variance highlights contested areas.
+
 
 Available actions: inject new arguments, update the aspect matrix, export the current round, start the next round, or finalize.
 
@@ -136,6 +145,7 @@ A persistent tracker is accessible from the top bar (Usage button). It shows:
 - Session totals across all models
 - Resets automatically on new session or app launch
 - Gracefully shows "N/A" for providers that do not return usage metadata; cost tracking never blocks the agent loop
+![Agentic Council Screenshot](screenshots/agentic_council_screenshot_6.jpg)
 
 ---
 
