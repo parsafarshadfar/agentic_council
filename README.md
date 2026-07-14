@@ -140,71 +140,23 @@ Exported files are written to the location you choose via a native file picker. 
 
 ### Resilience and error handling
 
-**Timeout configuration (four independent per-provider windows):**
-| Timeout type | Default |
-|---|---|
-| Connection | 10 s |
-| First token | 30 s (113 s for DeepSeek reasoning models) |
-| Idle stream (between chunks) | 15 s |
-| Total request wall-clock | 300 s |
-
-**Retry policy:**
-- Transient failures (HTTP 429, 500/502/503, network timeout): exponential backoff with jitter, up to 3 attempts.
-- Permanent failures (HTTP 401, 403, invalid model ID): never retried; immediate user-facing diagnostic.
-- Partial-stream retries: the notice log warns that already-consumed tokens may be re-billed.
-
-**Mid-stream agent failure (graceful degradation):**
-If one agent fails during a round, the remaining agents continue uninterrupted. The failed agent's panel shows an inline error badge. The Orchestrator's scoring matrix automatically adjusts to score only agents that delivered complete responses. A one-click **Retry failed agent** action re-runs just that agent against the same round context.
-
-**Test Connection:**
-Each provider has an explicit "Test Connection" button in Settings that performs a lightweight validation call (does not affect agents in session). Keys are always saved to the OS keychain regardless; untested keys display an "Untested" badge.
-
-**User-facing error categorization:**
-- *Informational* — "Model X is warming up, retrying…"
-- *Warning* — "Agent 3 timed out; round continues with remaining agents"
-- *Critical* — "All agents failed — check your API keys in Settings"
-
-A collapsible diagnostic log panel (top bar → Log) shows all events for the session. All log entries are sanitized: API keys are redacted to `sk-****…****`, prompt content is truncated to the first 50 characters followed by `[REDACTED]`, and full response text is never persisted.
+- **Graceful Degradation:** If an individual agent fails or times out during a round, the session continues with the remaining agents. You can retry the failed agent individually from the user interface.
+- **Retry Policy:** The app automatically retries transient errors (like network timeouts or rate limits) using exponential backoff.
+- **Diagnostic Logs:** A collapsible session log sanitizes sensitive data (redacting API keys and prompt content) while helping you troubleshoot connection issues.
 
 ---
 
 ### Document and image ingestion
 
-Accepted formats: **PDF, TXT, Markdown, CSV, JSON, DOCX, PNG, JPG, WEBP**
-
-Resource limits:
-- 20 files per session
-- 25 MiB per file
-- 100 MiB total batch
-- 80 megapixels per image
-- 2,000,000 extracted characters
-
-Edge-case handling:
-- **Scanned / image-only PDFs:** extraction is attempted; if fewer than 24 characters of trustworthy text are recovered the user is warned that OCR was inconclusive.
-- **Password-protected PDFs:** rejected immediately with a specific diagnostic.
-- **Complex DOCX tables:** nested or spanning-cell tables fall back to linearized text tagged with `[Table extraction approximate]`.
-- **Context overflow:** if the total bundle (prompt + documents + images) exceeds the smallest assigned model's context window, the oldest/lowest-priority sections are condensed; the user is warned with the overflow amount in tokens and offered the option to remove files or switch to a larger-context model.
-- **Malformed or corrupted files:** each file is reported individually; one bad file does not block the rest.
-- **Unsupported types:** rejected at the drag-and-drop stage with a clear message listing supported formats.
-- **Prompt injection via documents:** ingested content is clearly delimited from system instructions in the LLM prompt structure; executable content (scripts, macros) is stripped during extraction.
-
-Images are Base64-encoded and routed to vision-capable models. If a model does not support vision and an image is attached, the user is notified to either remove the image or replace that model.
+The app supports importing documents and images (including PDF, TXT, Markdown, CSV, JSON, DOCX, PNG, JPG, and WEBP) directly into the session setup. Standard size and format limits apply, and image inputs are automatically routed to vision-capable models.
 
 ---
 
 ### Security and credential management
 
-- **No keys in the frontend:** API keys are piped directly from the Settings form to the OS-native credential manager via the Rust `keyring` crate (Windows Credential Manager / macOS Keychain). They are never written to disk, localStorage, or sessionStorage, and are never returned to the webview layer.
-- **Secrets are zeroized in memory** using the `zeroize` crate after use.
-- **Endpoint validation (SSRF controls):** custom endpoints are validated before every request. HTTPS is required for remote hosts; plain HTTP is permitted only for loopback addresses (e.g., a local Ollama server). Link-local, metadata, multicast, and unspecified destinations are blocked.
-- **Content Security Policy:** the webview runs under a strict CSP (`default-src 'self'`; no `eval`, no external scripts, no unrestricted network access).
-- **Hard Clear:** Settings includes a "Wipe Credentials & Clear Cache" function backed by a confirmation dialog that explicitly lists every category of data it will delete:
-  - All API keys from the OS credential manager (local removal only; keys must be separately revoked at the provider)
-  - All cached model roster data
-  - All temporary extraction files
-  - All local session data, checkpoints, and compacted history
-  - All exported document caches and Typst intermediates
-  - In-memory buffers and runtime credential references
+- **Local API Keys:** API keys are stored securely in your OS-native credential manager (Windows Credential Manager / macOS Keychain). They are never written to disk, stored in local storage, or sent to any third party except the direct provider APIs you configure.
+- **SSRF and CSP Controls:** Local network access and webview routing follow strict security boundaries to prevent unauthorized data transmission.
+- **Wipe Data:** A "Wipe Credentials & Clear Cache" option is available in Settings to securely remove all keys, caches, and session history from your local machine.
 
 ---
 
@@ -218,19 +170,7 @@ A persistent tracker is accessible from the top bar (Usage button). It shows:
 
 ---
 
-### UI layout
 
-- **Top bar:** brand lockup, live phase indicator with current round number, New Session, Usage, Log, and Settings controls.
-- **Session Setup:** objective text area, multi-file drag-and-drop attachment zone, agent assignment table (provider + model + optional persona per slot), quorum indicator.
-- **Clarification panel:** interactive Q&A loop with the Orchestrator.
-- **Aspect gate:** editable aspect cards with thumbs-up / thumbs-down / inline rename controls.
-- **Roundtable:** live streaming panels per agent, moderator friction card at center with type badges (⚡ Contradiction, 🕳️ Gap Detected, ⚠️ Unsubstantiated), interactive radar/spider charts powered by Recharts, per-data-point voting breakdown cards.
-- **Zoom control:** 80 % – 150 % in-app zoom with Tauri webview native scaling; preference persisted to localStorage.
-- **Info tooltips (ℹ):** glassmorphic overlay cards adjacent to every advanced concept (Ambiguity Score, Aspects, Semantic Similarity, Consensus, Cost metrics, Compaction) with fade-in micro-animation, keyboard accessibility, and aria labels.
-- **Toast notifications:** live severity-categorized notices stacked in the bottom corner; dismissible individually.
-- **Recovery dialog:** appears on launch if an interrupted session is found; non-dismissible until the user makes a choice.
-
----
 
 ## Developer reference
 
