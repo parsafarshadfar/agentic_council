@@ -29,10 +29,12 @@ import {
   Tooltip,
 } from "recharts";
 import { backend } from "../lib/backend";
+import { councilorLabel } from "../lib/agentPresentation";
 import { sessionExportBasename } from "../lib/exportFilename";
 import { useCouncilStore } from "../store/councilStore";
 import type { AgentAssignment, ExportResult, FrictionItem, RoundRecord, ScoreCell } from "../types";
 import { InfoTip } from "./InfoTip";
+import { MarkdownContent } from "./MarkdownContent";
 
 const frictionMeta: Record<FrictionItem["kind"], { label: string; icon: typeof Zap }> = {
   contradiction: { label: "Contradiction", icon: Zap },
@@ -110,6 +112,7 @@ export function Roundtable({ onError }: { onError: (message: string, details?: s
 
   const modelName = (agent: AgentAssignment) => models.find((model) => model.id === agent.model_id && model.provider_id === agent.provider_id)?.name ?? agent.model_id;
   const personaName = (agent: AgentAssignment) => personas.find((persona) => persona.id === agent.persona_id)?.name;
+  const agentName = (agent: AgentAssignment) => councilorLabel(agent.display_name);
 
   return (
     <div className="roundtable-shell">
@@ -130,12 +133,12 @@ export function Roundtable({ onError }: { onError: (message: string, details?: s
           <div className="table-visual">
             <div className="seat moderator-seat"><BrainCircuit size={22} /><span>Moderator</span></div>
             <div className="table-core"><UsersRound size={42} /><strong>{members.length} perspectives</strong><span>{session.aspects.length} approved aspects</span></div>
-            {members.map((agent, index) => <div key={agent.id} className={`seat member-seat seat-${index + 1}`}><span>{index + 1}</span><strong>{personaName(agent) ?? agent.display_name}</strong><small>{modelName(agent)}</small></div>)}
+            {members.map((agent, index) => <div key={agent.id} className={`seat member-seat seat-${index + 1}`}><span>{index + 1}</span><strong>{personaName(agent) ?? agentName(agent)}</strong><small>{modelName(agent)}</small></div>)}
           </div>
           <div className="ready-copy">
             <span className="section-kicker"><Sparkles size={13} /> BRIEF APPROVED</span>
             <h2>The table is set.</h2>
-            <p>Members generate independently and in parallel. After all complete, the moderator identifies friction and each member scores every other response from 0 to 10. You can inspect who cast every vote.</p>
+            <p>Councilors generate independently and in parallel. After all complete, the moderator identifies friction and each councilor scores every other response from 0 to 10. You can inspect who cast every vote.</p>
             <button className="button primary" type="button" onClick={() => void runRound()}>Begin round one<ArrowRight size={17} /></button>
           </div>
         </section>
@@ -159,13 +162,13 @@ export function Roundtable({ onError }: { onError: (message: string, details?: s
                 <article className="response-panel" key={agent.id} id={`agent-${agent.id}`} style={{ "--agent-color": colors[index % colors.length] } as React.CSSProperties}>
                   <header>
                     <span className="response-avatar">{index + 1}</span>
-                    <div><strong>{agent.display_name}</strong><small>{modelName(agent)}{personaName(agent) ? ` • ${personaName(agent)}` : ""}</small></div>
+                    <div><strong>{agentName(agent)}</strong><small>{modelName(agent)}{personaName(agent) ? ` • ${personaName(agent)}` : ""}</small></div>
                     <span className={`status-pill status-${response?.status ?? agent.status}`}>
                       {response?.status === "streaming" && <LoaderCircle size={12} className="spin" />}{response?.status ?? agent.status}
                     </span>
                   </header>
                   <div className="response-content">
-                    {response?.content || <span className="waiting-text">Waiting for first token…</span>}
+                    {response?.content ? <MarkdownContent content={response.content} /> : <span className="waiting-text">Waiting for first token…</span>}
                   </div>
                   <footer>
                     <span>{response?.output_tokens == null ? "Tokens N/A" : `${response.output_tokens.toLocaleString()} output tokens`}</span>
@@ -205,7 +208,7 @@ export function Roundtable({ onError }: { onError: (message: string, details?: s
           {session.phase === "finalized" && (
             <section className="final-card">
               <div className="final-icon"><CheckCircle2 size={28} /></div>
-              <div><span className="section-kicker">COUNCIL FROZEN</span><h2>Deliberation complete.</h2><p>{session.final_synthesis || "The complete transcript, friction record, and scoring provenance are ready to export."}</p></div>
+              <div><span className="section-kicker">COUNCIL FROZEN</span><h2>Deliberation complete.</h2><MarkdownContent className="final-synthesis" content={session.final_synthesis || "The complete transcript, friction record, and scoring provenance are ready to export."} /></div>
               <div className="command-actions"><button className="button secondary" type="button" onClick={() => void exportSession("pdf")}><Download size={16} />Export PDF</button><button className="button primary" type="button" onClick={() => void newSession()}><RotateCcw size={16} />New session</button></div>
             </section>
           )}
@@ -227,7 +230,7 @@ function FrictionBoard({ round, agents }: { round: RoundRecord; agents: AgentAss
             <article key={item.id} className={`friction-card friction-${item.kind}`}>
               <div className="friction-badge"><Icon size={14} />{meta.label}</div>
               <p>{item.explanation}</p>
-              {item.agent_ids.length > 0 && <div className="agent-links">{item.agent_ids.map((id) => <a href={`#agent-${id}`} key={id}>{agents.find((agent) => agent.id === id)?.display_name ?? "Response"}</a>)}</div>}
+              {item.agent_ids.length > 0 && <div className="agent-links">{item.agent_ids.map((id) => <a href={`#agent-${id}`} key={id}>{councilorLabel(agents.find((agent) => agent.id === id)?.display_name ?? "Response")}</a>)}</div>}
               <blockquote>{item.challenge}</blockquote>
             </article>
           );
@@ -264,21 +267,21 @@ function ScoreBoard({ round, agents, selected, onSelect }: { round: RoundRecord;
               <PolarGrid stroke="rgba(160,174,210,.2)" />
               <PolarAngleAxis dataKey="aspect" tick={{ fill: "#9aa6c4", fontSize: 11 }} />
               <PolarRadiusAxis angle={25} domain={[0, 10]} tick={false} axisLine={false} />
-              {agents.map((agent, index) => <Radar key={agent.id} name={agent.display_name} dataKey={agent.id} stroke={colors[index % colors.length]} fill={colors[index % colors.length]} fillOpacity={0.1} strokeWidth={2} />)}
+              {agents.map((agent, index) => <Radar key={agent.id} name={councilorLabel(agent.display_name)} dataKey={agent.id} stroke={colors[index % colors.length]} fill={colors[index % colors.length]} fillOpacity={0.1} strokeWidth={2} />)}
               <Tooltip contentStyle={{ background: "#111628", border: "1px solid rgba(255,255,255,.12)", borderRadius: 12 }} />
             </RadarChart>
           </ResponsiveContainer>
-          <div className="chart-legend">{agents.map((agent, index) => <span key={agent.id}><i style={{ background: colors[index % colors.length] }} />{agent.display_name}</span>)}</div>
+          <div className="chart-legend">{agents.map((agent, index) => <span key={agent.id}><i style={{ background: colors[index % colors.length] }} />{councilorLabel(agent.display_name)}</span>)}</div>
         </div>
         <div className="score-matrix-wrap">
           <table className="score-matrix">
-            <thead><tr><th>Aspect (median / 10)</th>{agents.map((agent) => <th key={agent.id}>{agent.display_name}</th>)}</tr></thead>
+            <thead><tr><th>Aspect (median / 10)</th>{agents.map((agent) => <th key={agent.id}>{councilorLabel(agent.display_name)}</th>)}</tr></thead>
             <tbody>{session?.aspects.map((aspect) => <tr key={aspect.id}><th>{aspect.name}</th>{agents.map((agent) => { const score = round.scores.find((item) => item.aspect_id === aspect.id && item.agent_id === agent.id); return <td key={agent.id}><button type="button" className={breakdown === score ? "selected" : ""} onClick={() => score && onSelect(score)}>{score?.median.toFixed(1) ?? "—"}</button></td>; })}</tr>)}</tbody>
           </table>
           {breakdown && (
             <div className="vote-breakdown">
-              <header><div><span>VOTE BREAKDOWN</span><strong>{selectedAgent?.display_name} • {selectedAspect?.name}</strong></div><b>{breakdown.median.toFixed(1)}<small>/ 10</small></b></header>
-              {breakdown.votes.length === 0 ? <p>No eligible peer votes.</p> : breakdown.votes.map((vote, index) => <div key={`${vote.voter_alias}-${index}`}><span title={vote.voter_alias}>{vote.voter_alias}</span><div><i style={{ width: `${vote.score * 10}%` }} /></div><b>{vote.score.toFixed(1)} / 10</b>{vote.outlier && <em>outlier</em>}</div>)}
+              <header><div><span>VOTE BREAKDOWN</span><strong>{selectedAgent ? councilorLabel(selectedAgent.display_name) : "Unknown councilor"} • {selectedAspect?.name}</strong></div><b>{breakdown.median.toFixed(1)}<small>/ 10</small></b></header>
+              {breakdown.votes.length === 0 ? <p>No eligible peer votes.</p> : breakdown.votes.map((vote, index) => { const voterLabel = councilorLabel(vote.voter_alias); return <div key={`${vote.voter_alias}-${index}`}><span title={voterLabel}>{voterLabel}</span><div><i style={{ width: `${vote.score * 10}%` }} /></div><b>{vote.score.toFixed(1)} / 10</b>{vote.outlier && <em>outlier</em>}</div>; })}
               <small>Models see anonymous responses and cannot score themselves. You can see which model cast every vote.</small>
             </div>
           )}

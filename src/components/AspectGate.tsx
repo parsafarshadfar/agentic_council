@@ -34,7 +34,7 @@ export function AspectGate({ onError }: { onError: (message: string, details?: s
         <div>
           <span className="section-kicker">USER GATE • NO AGENT TOKENS YET</span>
           <h1>Approve the evaluation lens.</h1>
-          <p>Every member receives these same dimensions. Rename, rebalance, add, or remove them before the live round.</p>
+          <p>Every councilor receives these same dimensions. Rename, rebalance, add, or remove them before the live round.</p>
         </div>
         <InfoTip label="Discussion aspects">The dimensions the council uses to structure responses and peer scores. Editing them changes what “good” means for this session.</InfoTip>
       </header>

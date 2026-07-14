@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { backend } from "../lib/backend";
+import { councilorLabel } from "../lib/agentPresentation";
 import {
   modelMatchesSearch,
   providerOptionLabel,
@@ -224,8 +225,8 @@ export function SessionSetup({ onError }: { onError: (message: string, details?:
               <article className={`agent-config ${agent.role}`} key={agent.id} data-agent-id={agent.id}>
                 <header>
                   <span className="agent-index">{agent.role === "orchestrator" ? "M" : members.findIndex((item) => item.id === agent.id) + 1}</span>
-                  <div><strong>{agent.role === "orchestrator" ? "Orchestrator" : agent.display_name}</strong><small>{agent.role === "orchestrator" ? "Moderator & synthesis" : "Independent generation & peer vote"}</small></div>
-                  {agent.role === "member" && members.length > 2 && <button className="icon-button small" type="button" onClick={() => session && setSession({ ...session, agents: agents.filter((item) => item.id !== agent.id) })} aria-label={`Remove ${agent.display_name}`}><Trash2 size={14} /></button>}
+                  <div><strong>{agent.role === "orchestrator" ? "Orchestrator" : councilorLabel(agent.display_name)}</strong><small>{agent.role === "orchestrator" ? "Moderator & synthesis" : "Independent generation & peer vote"}</small></div>
+                  {agent.role === "member" && members.length > 2 && <button className="icon-button small" type="button" onClick={() => session && setSession({ ...session, agents: agents.filter((item) => item.id !== agent.id) })} aria-label={`Remove ${councilorLabel(agent.display_name)}`}><Trash2 size={14} /></button>}
                 </header>
                 <div className="field-grid">
                   <label><span className="field-label-line">Provider
@@ -278,7 +279,7 @@ export function SessionSetup({ onError }: { onError: (message: string, details?:
                             }
                           }}
                           placeholder="Search or choose a model"
-                          aria-label={`Search and choose a model for ${agent.display_name}`}
+                          aria-label={`Search and choose a model for ${councilorLabel(agent.display_name)}`}
                         />
                         <ChevronDown size={14} />
                       </div>
@@ -325,8 +326,8 @@ export function SessionSetup({ onError }: { onError: (message: string, details?:
         {members.length < 8 && <button type="button" className="add-seat" onClick={addMember}><Plus size={16} />Add council seat</button>}
         <div className="builder-actions">
           <div className="quorum-help">
-            <InfoTip label="Minimum quorum">A valid session needs exactly one Orchestrator and at least two council members so independent comparison and peer scoring are meaningful.</InfoTip>
-            <span>{quorum ? "Quorum ready" : "Add at least two members"}</span>
+            <InfoTip label="Minimum quorum">A valid session needs exactly one Orchestrator and at least two councilors so independent comparison and peer scoring are meaningful.</InfoTip>
+            <span>{quorum ? "Quorum ready" : "Add at least two councilors"}</span>
           </div>
           <button className="button primary start-button" type="button" disabled={!canStart || busy} onClick={() => void start()}>
             {busy ? "Orchestrator analyzing…" : "Convene council"} <BrainCircuit size={17} />

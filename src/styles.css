@@ -236,7 +236,38 @@ select option { color: #e5e9f6; background: #12182a; }
 .status-streaming { color: var(--violet-bright); background: rgba(141,124,248,.1); }
 .status-complete { color: var(--mint); background: rgba(62,216,188,.08); }
 .status-failed, .status-cancelled { color: var(--red); background: rgba(241,111,136,.08); }
-.response-content { flex: 1; padding: 18px; overflow: auto; color: #c9d0e3; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; line-height: 1.75; white-space: pre-wrap; }
+.response-content { flex: 1; padding: 18px; overflow: auto; color: #c9d0e3; font-size: 11px; line-height: 1.7; }
+.markdown-content { min-width: 0; overflow-wrap: anywhere; }
+.markdown-content > :first-child { margin-top: 0; }
+.markdown-content > :last-child { margin-bottom: 0; }
+.markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4 { margin: 1.35em 0 .55em; color: #f3f5fc; line-height: 1.28; letter-spacing: -.018em; }
+.markdown-content h1 { padding-bottom: .35em; border-bottom: 1px solid var(--line); font-size: 1.7em; }
+.markdown-content h2 { padding-bottom: .28em; border-bottom: 1px solid var(--line); font-size: 1.45em; }
+.markdown-content h3 { font-size: 1.24em; }
+.markdown-content h4 { font-size: 1.08em; }
+.markdown-content p { margin: .75em 0; }
+.markdown-content strong { color: #f1f3fb; font-weight: 750; }
+.markdown-content em { color: #d7dced; }
+.markdown-content ul, .markdown-content ol { margin: .7em 0; padding-left: 1.7em; }
+.markdown-content li { margin: .28em 0; padding-left: .2em; }
+.markdown-content li::marker { color: var(--violet-bright); }
+.markdown-content blockquote { margin: .9em 0; padding: .25em 1em; color: #adb6ce; border-left: 3px solid var(--violet); background: rgba(141,124,248,.045); }
+.markdown-content blockquote > :first-child { margin-top: .35em; }
+.markdown-content blockquote > :last-child { margin-bottom: .35em; }
+.markdown-content a { color: #aaa0ff; text-decoration-color: rgba(170,160,255,.45); text-underline-offset: 2px; }
+.markdown-content a:hover { color: #c4bdff; text-decoration-color: currentColor; }
+.markdown-content code { padding: .15em .4em; color: #f0c985; border: 1px solid rgba(241,173,91,.12); border-radius: 5px; background: rgba(241,173,91,.07); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .9em; }
+.markdown-content pre { margin: .9em 0; padding: 12px 14px; overflow: auto; border: 1px solid var(--line); border-radius: 9px; background: #080c17; }
+.markdown-content pre code { padding: 0; color: #cbd3e8; border: 0; background: transparent; font-size: .9em; white-space: pre; }
+.markdown-content hr { margin: 1.25em 0; border: 0; border-top: 1px solid var(--line); }
+.markdown-table-wrap { max-width: 100%; margin: 1em 0; overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; }
+.markdown-content table { width: 100%; border-collapse: collapse; background: rgba(5,8,16,.3); font-size: .94em; }
+.markdown-content th, .markdown-content td { min-width: 90px; padding: 8px 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.markdown-content th { color: #f0f2fa; background: rgba(141,124,248,.1); font-weight: 750; }
+.markdown-content tr:nth-child(even) td { background: rgba(255,255,255,.018); }
+.markdown-content tr:last-child td { border-bottom: 0; }
+.markdown-content th:last-child, .markdown-content td:last-child { border-right: 0; }
+.markdown-content input[type="checkbox"] { margin-right: .45em; accent-color: var(--violet); }
 .waiting-text { color: #5f6983; }
 .response-panel > footer { padding: 8px 12px; display: flex; gap: 10px; color: #66708a; border-top: 1px solid var(--line); font-size: 8px; }
 .response-panel > footer span:nth-child(2) { margin-left: auto; }
@@ -291,7 +322,7 @@ select option { color: #e5e9f6; background: #12182a; }
 .final-card { padding: 22px; display: flex; align-items: center; gap: 15px; }
 .final-icon { width: 50px; height: 50px; display: grid; place-items: center; color: var(--mint); border-radius: 14px; background: rgba(62,216,188,.09); }
 .final-card > div:nth-child(2) { flex: 1; }
-.final-card p { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
+.final-synthesis { margin-top: 5px; color: var(--muted); font-size: 10px; }
 
 /* Modal and notices */
 .modal-backdrop { padding: 30px; display: grid; place-items: center; position: fixed; inset: 0; z-index: 90; background: rgba(2, 4, 10, .72); backdrop-filter: blur(10px); animation: fadeIn .15s ease-out; }
