@@ -178,12 +178,40 @@ function Install-Rustup {
     Write-Info 'Downloading rustup from the official Rust servers...'
     $baseUri = "https://static.rust-lang.org/rustup/dist/$RustTarget"
     $installerPath = Join-Path $script:TempRoot 'rustup-init.exe'
-    Invoke-Download -Uri "$baseUri/rustup-init.exe" -Destination $installerPath
-    $checksum = (Invoke-WebRequest -UseBasicParsing -Uri "$baseUri/rustup-init.exe.sha256").Content
-    $expectedHash = [regex]::Match([string]$checksum, '^[a-fA-F0-9]{64}').Value
-    $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash
-    if ([string]::IsNullOrWhiteSpace($expectedHash) -or $actualHash -ne $expectedHash) {
-        throw 'The Rust installer failed its security checksum.'
+    $checksumPath = Join-Path $script:TempRoot 'rustup-init.exe.sha256'
+    $expectedHash = $null
+    $actualHash = $null
+
+    # Download both files for each attempt. Rust's CDN can briefly serve the
+    # installer and checksum from different cache generations during an update.
+    # Reading the checksum from disk also avoids Windows PowerShell 5.1 treating
+    # Invoke-WebRequest.Content as bytes for some response content types.
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        Invoke-Download -Uri "$baseUri/rustup-init.exe" -Destination $installerPath
+        Invoke-Download -Uri "$baseUri/rustup-init.exe.sha256" -Destination $checksumPath
+
+        $checksumText = Get-Content -Raw -LiteralPath $checksumPath
+        $checksumMatch = [regex]::Match([string]$checksumText, '(?i)(?<![a-f0-9])[a-f0-9]{64}(?![a-f0-9])')
+        if (-not $checksumMatch.Success) {
+            if ($attempt -lt 3) {
+                Write-Info ("Rust checksum response was invalid on attempt {0}; retrying both files..." -f $attempt)
+                continue
+            }
+            throw 'Rust did not return a valid SHA-256 checksum. A proxy or security filter may be replacing the response from static.rust-lang.org.'
+        }
+
+        $expectedHash = $checksumMatch.Value
+        $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash
+        if ($actualHash -ieq $expectedHash) {
+            break
+        }
+        if ($attempt -lt 3) {
+            Write-Info ("Rust installer and checksum did not match on attempt {0}; retrying both files..." -f $attempt)
+        }
+    }
+
+    if ($actualHash -ine $expectedHash) {
+        throw 'The Rust installer did not match Rust''s published checksum after 3 attempts. A proxy, VPN, antivirus web shield, or filtered network may be changing the download. Allow static.rust-lang.org or try another network, then run install.bat again.'
     }
 
     $process = Start-Process -FilePath $installerPath -ArgumentList @(

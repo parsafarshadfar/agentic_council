@@ -81,6 +81,7 @@ The script supports Debian/Ubuntu-style systems using `apt-get` and Fedora-style
 | A Windows permission prompt appears | Click **Yes**. It is the official Microsoft C++ Build Tools installer. |
 | macOS shows the Command Line Tools dialog | Click **Install** and leave Terminal open. |
 | Linux reports that the distribution is unsupported | Install the Tauri v2 system prerequisites manually, then re-run the script. |
+| Rust installer/checksum download is invalid | Re-run the latest `install.bat`. If it still fails after three attempts, disable any VPN or antivirus web-download scanning temporarily, allow `static.rust-lang.org`, or try another network. Do not bypass the checksum check. |
 | The window closed before the app appeared | Re-run the installer — it will resume where it left off. |
 | "npm install failed" or "cargo build failed" | Check your internet connection and re-run the installer. |
 
