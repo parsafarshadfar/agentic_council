@@ -440,6 +440,11 @@ select option { color: #e5e9f6; background: #12182a; }
 .telemetry-table tbody th span { color: #6e7894; font-size: 7px; text-transform: uppercase; }
 .telemetry-table tbody th strong { margin-top: 2px; font-size: 9px; }
 .privacy-note { color: #68738e; font-size: 8px; }
+.telemetry-table td:first-child { text-align: left; }
+.telemetry-table .row-orchestrator { background: rgba(141, 124, 248, .07); }
+.role-badge { display: inline-block; padding: 2px 7px; border-radius: 99px; font-size: 7.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.role-orchestrator { background: rgba(141, 124, 248, .18); color: #b4a9ff; border: 1px solid rgba(141, 124, 248, .35); }
+.role-councilor { background: rgba(80, 180, 140, .12); color: #7ecfb0; border: 1px solid rgba(80, 180, 140, .28); }
 .spin { animation: spin 1s linear infinite; }
 
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -241,7 +241,8 @@ function FrictionBoard({ round, agents }: { round: RoundRecord; agents: AgentAss
 }
 
 function ScoreBoard({ round, agents, selected, onSelect }: { round: RoundRecord; agents: AgentAssignment[]; selected: ScoreCell | null; onSelect: (score: ScoreCell | null) => void }) {
-  const { session } = useCouncilStore();
+  const { session, models } = useCouncilStore();
+  const modelName = (agent: AgentAssignment) => models.find((m) => m.id === agent.model_id)?.name ?? agent.model_id;
   const chartData = useMemo(() => session?.aspects.map((aspect) => ({
     aspect: aspect.name.length > 18 ? `${aspect.name.slice(0, 17)}…` : aspect.name,
     fullAspect: aspect.name,
@@ -271,7 +272,7 @@ function ScoreBoard({ round, agents, selected, onSelect }: { round: RoundRecord;
               <Tooltip contentStyle={{ background: "#111628", border: "1px solid rgba(255,255,255,.12)", borderRadius: 12 }} />
             </RadarChart>
           </ResponsiveContainer>
-          <div className="chart-legend">{agents.map((agent, index) => <span key={agent.id}><i style={{ background: colors[index % colors.length] }} />{councilorLabel(agent.display_name)}</span>)}</div>
+          <div className="chart-legend">{agents.map((agent, index) => <span key={agent.id}><i style={{ background: colors[index % colors.length] }} />{councilorLabel(agent.display_name)}<span className="legend-model-name"> ({modelName(agent)})</span></span>)}</div>
         </div>
         <div className="score-matrix-wrap">
           <table className="score-matrix">
