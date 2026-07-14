@@ -69,7 +69,9 @@ pub async fn start_preflight(
         &attachments,
         CancellationToken::new(),
     )
-    .await?;
+    .await;
+    state.emit_telemetry(&app);
+    let analysis = analysis?;
     let phase = if analysis.needs_clarification {
         LifecyclePhase::Clarification
     } else {
@@ -148,7 +150,9 @@ pub async fn submit_clarification(
         &snapshot.attachments,
         CancellationToken::new(),
     )
-    .await?;
+    .await;
+    state.emit_telemetry(&app);
+    let analysis = analysis?;
     let next_phase = if analysis.needs_clarification {
         LifecyclePhase::Clarification
     } else {
@@ -389,6 +393,7 @@ pub async fn finalize_session(
         return Err("The council can only be finalized after a round completes.".into());
     }
     let synthesis = engine::synthesize(&state, CancellationToken::new()).await;
+    state.emit_telemetry(&app);
     let (_, session) = state.mutate_session(|session| {
         session.final_synthesis = Some(synthesis);
         session.phase = LifecyclePhase::Finalized;

@@ -438,7 +438,7 @@ pub async fn orchestrate_preflight(
         thinking_enabled: None,
         images: vec![],
     };
-    let result = complete_with_provider(&provider, request, cancellation)
+    let result = complete_with_provider(state, orchestrator, &provider, request, cancellation)
         .await
         .map_err(|error| format!("Orchestrator preflight failed: {}", error.user_message()))?;
     let parsed = parse_json::<PreflightEnvelope>(&result.content).map_err(|error| {
@@ -858,7 +858,8 @@ async fn postprocess_round<E: RoundEvents>(
         return;
     }
 
-    let friction = analyze_friction(&snapshot, round_index, cancellation, providers).await;
+    let friction = analyze_friction(state, &snapshot, round_index, cancellation, providers).await;
+    events.emit_telemetry(state);
     if cancellation.is_cancelled() {
         return;
     }
@@ -876,7 +877,15 @@ async fn postprocess_round<E: RoundEvents>(
     }
 
     let scoring_snapshot = state.session();
-    let scores = peer_score(&scoring_snapshot, round_index, cancellation, providers).await;
+    let scores = peer_score(
+        state,
+        &scoring_snapshot,
+        round_index,
+        cancellation,
+        providers,
+    )
+    .await;
+    events.emit_telemetry(state);
     if cancellation.is_cancelled() {
         return;
     }
@@ -1044,6 +1053,8 @@ async fn prepare_provider_pool(
 }
 
 async fn complete_with_provider(
+    state: &AppState,
+    agent: &AgentAssignment,
     provider: &PreparedProvider,
     request: CompletionRequest,
     cancellation: CancellationToken,
@@ -1052,7 +1063,14 @@ async fn complete_with_provider(
         provider.gate.clone().acquire_owned().await.map_err(|_| {
             ProviderError::Network("provider request queue closed unexpectedly".into())
         })?;
-    provider.client.complete(request, cancellation).await
+    let result = provider.client.complete(request, cancellation).await?;
+    state.record_usage(
+        &agent.provider_id,
+        &agent.model_id,
+        result.input_tokens,
+        result.output_tokens,
+    );
+    Ok(result)
 }
 
 pub async fn synthesize(state: &AppState, cancellation: CancellationToken) -> String {
@@ -1115,7 +1133,7 @@ pub async fn synthesize(state: &AppState, cancellation: CancellationToken) -> St
             .collect();
     }
     let request = CompletionRequest { system: "You are the council Orchestrator. Synthesize faithfully; distinguish consensus, contested claims, risks, and concrete next actions. Do not invent facts.".into(), prompt: format!("OBJECTIVE:\n{}\n\nTRANSCRIPT:\n{}\n\nReturn a concise executive synthesis with a recommendation, reasoning, unresolved disagreements, and next actions.", session.objective, transcript), model: agent.model_id.clone(), max_tokens: 1_800, temperature: 0.25, thinking_enabled: None, images: vec![] };
-    complete_with_provider(&provider, request, cancellation)
+    complete_with_provider(state, agent, &provider, request, cancellation)
         .await
         .map(|result| result.content)
         .unwrap_or_else(|_| fallback())
@@ -1196,6 +1214,7 @@ struct FrictionWire {
 }
 
 async fn analyze_friction(
+    state: &AppState,
     session: &SessionState,
     round_index: u32,
     cancellation: &CancellationToken,
@@ -1239,7 +1258,14 @@ async fn analyze_friction(
         .collect::<Vec<_>>()
         .join("\n");
     let request = CompletionRequest { system: "You are a rigorous debate moderator. Compare completed responses and identify direct contradictions, analytical omissions, unsupported assertions, and genuine consensus. Return only valid JSON.".into(), prompt: format!("ASPECT IDS:\n{aspects}\n\nRESPONSES:\n{responses}\n\nReturn {{\"friction_items\":[{{\"kind\":\"contradiction|omission|unsupported_claim|consensus\",\"agent_ids\":[\"...\"],\"aspect_id\":\"... or null\",\"explanation\":\"...\",\"challenge\":\"...\"}}]}}."), model: orchestrator.model_id.clone(), max_tokens: 1_500, temperature: 0.1, thinking_enabled: None, images: vec![] };
-    let Ok(result) = complete_with_provider(provider, request, cancellation.child_token()).await
+    let Ok(result) = complete_with_provider(
+        state,
+        orchestrator,
+        provider,
+        request,
+        cancellation.child_token(),
+    )
+    .await
     else {
         return fallback();
     };
@@ -1282,6 +1308,7 @@ fn local_friction(session: &SessionState, responses: &[&AgentResponse]) -> Vec<F
 }
 
 async fn peer_score(
+    state: &AppState,
     session: &SessionState,
     round_index: u32,
     cancellation: &CancellationToken,
@@ -1330,6 +1357,7 @@ async fn peer_score(
             .unwrap_or_else(|| "Unknown councilor".into());
         let remote_scores = if let Some(voter) = voter.filter(|voter| voter.provider_id != "demo") {
             score_with_provider(
+                state,
                 session,
                 &completed,
                 &aliases,
@@ -1386,6 +1414,7 @@ async fn peer_score(
 }
 
 async fn score_with_provider(
+    state: &AppState,
     session: &SessionState,
     completed: &[AgentResponse],
     aliases: &HashMap<String, String>,
@@ -1414,9 +1443,10 @@ async fn score_with_provider(
         .map(|aspect| aspect.name.as_str())
         .collect::<Vec<_>>();
     let request = CompletionRequest { system: "You are an anonymous peer evaluator. Score content quality, not author identity. Response length must not influence scoring: concise and precise beats verbose and repetitive. Never score your own omitted response. Return only valid JSON.".into(), prompt: format!("ASPECTS: {}\n\nANONYMIZED RESPONSES:\n{}\n\nScore every response on every aspect from 0 to 10: 0-2 critical/factually wrong; 3-4 superficial; 5-6 adequate/generic; 7-8 strong and reasoned; 9-10 exceptional, novel, actionable. Return {{\"Response Alpha\":{{\"Aspect name\":7.5}}}} with exactly the aliases and aspect names supplied.", serde_json::to_string(&aspects).unwrap_or_default(), responses), model: voter.model_id.clone(), max_tokens: 1_800, temperature: 0.0, thinking_enabled: None, images: vec![] };
-    let result = complete_with_provider(provider, request, cancellation.child_token())
-        .await
-        .map_err(|error| error.user_message())?;
+    let result =
+        complete_with_provider(state, voter, provider, request, cancellation.child_token())
+            .await
+            .map_err(|error| error.user_message())?;
     parse_json(&result.content)
 }
 
@@ -1747,6 +1777,68 @@ mod tests {
         assert!(batch.push("delta".into()).is_none());
         assert_eq!(batch.flush().as_deref(), Some("small delta"));
         assert!(batch.flush().is_none());
+    }
+
+    #[tokio::test]
+    async fn orchestrator_completion_records_tokens_and_costs() {
+        let root = std::env::temp_dir().join(format!(
+            "agentic-council-orchestrator-usage-{}",
+            uuid::Uuid::new_v4()
+        ));
+        let paths = crate::state::AppPaths::new(root.join("data"), root.join("cache")).unwrap();
+        let state = AppState::new(paths);
+        let orchestrator = state
+            .session()
+            .agents
+            .into_iter()
+            .find(|agent| agent.role == AgentRole::Orchestrator)
+            .unwrap();
+        let provider = PreparedProvider {
+            client: Arc::new(crate::providers::DemoProvider),
+            gate: Arc::new(Semaphore::new(1)),
+        };
+        let prompt = "A sufficiently long prompt for deterministic usage metadata.".to_string();
+        let expected_input = (prompt.len() / 4) as u64;
+        let request = CompletionRequest {
+            system: "Return a concise response.".into(),
+            prompt,
+            model: orchestrator.model_id.clone(),
+            max_tokens: 12,
+            temperature: 0.0,
+            thinking_enabled: None,
+            images: vec![],
+        };
+
+        complete_with_provider(
+            &state,
+            &orchestrator,
+            &provider,
+            request,
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+
+        let telemetry = state.telemetry();
+        let usage = telemetry
+            .by_model
+            .iter()
+            .find(|item| {
+                item.provider_id == orchestrator.provider_id
+                    && item.model_id == orchestrator.model_id
+            })
+            .unwrap();
+        assert_eq!(usage.input_tokens, Some(expected_input));
+        assert_eq!(usage.output_tokens, Some(12));
+        assert_eq!(usage.input_cost_usd, Some(0.0));
+        assert_eq!(usage.output_cost_usd, Some(0.0));
+        assert_eq!(usage.total_cost_usd, Some(0.0));
+        assert_eq!(telemetry.total_input_tokens, Some(expected_input));
+        assert_eq!(telemetry.total_output_tokens, Some(12));
+        assert_eq!(telemetry.total_cost_usd, Some(0.0));
+
+        drop(state);
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[tokio::test]
