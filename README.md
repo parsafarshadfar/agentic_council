@@ -1,9 +1,9 @@
 # Agentic Council
 
 **Your APIs. Your Rules.**  
-*The Open-Source Alternative to the Premium Multi-Model Brainstorming feature of Perplexity.*
+*The Open-Source Alternative to the Multi-Model Brainstorming feature of Perplexity MAX subscription.*
 
-Put your hardest question on the table. Agentic Council is a private, cross-platform desktop application for **multi-model AI brainstorming**. You assemble a council of AI agents, each running on a different model or provider, and watch them independently generate, **critique, and challenge each other's reasoning** in real-time across multiple debate rounds. The app enforces strict independence, contradiction analysis, anonymized peer scoring, and automatic session recovery—all without sending any data anywhere except the LLM provider APIs you explicitly configure.
+Put your hardest question on the table. Agentic Council is a private, cross-platform desktop application for **multi-model AI brainstorming**. Unlike other brainstorming solutions on the market, you can fully customize your AI lineup: you assemble a council of AI agents, each running on a different model or provider, and watch them independently generate, **critique, and challenge each other's reasoning** in real-time across multiple debate rounds. The app enforces strict independence, contradiction analysis, anonymized peer scoring, and automatic session recovery—all without sending any data anywhere except the LLM provider APIs you explicitly configure.
 
 ## Demo
 
@@ -166,11 +166,6 @@ These scripts run the project from source; they do not install a packaged deskto
 ### Launching the app after the first setup (Windows)
 
 Once `install.bat` has finished successfully, you can relaunch the app anytime by double-clicking **`run.bat`** instead of re-running the full installer. `run.bat` skips all prerequisite checks and dependency installation — it simply runs `npm run tauri -- dev` in the project folder. Keep the terminal window open while the app is running; closing it stops the app.
-
-Before launching, `run.bat` now performs bounded Cargo-cache maintenance. It removes only disposable incremental generations, incomplete temporary archives, and legacy mobile-library outputs inside `src-tauri/target`; it refuses paths outside that directory and skips maintenance if another Cargo build is active.
-
-On macOS and Linux, `install.sh` performs the equivalent guarded maintenance before launching. It lets Cargo coordinate access to the development cache, removes only known disposable paths under `src-tauri/target`, and runs with incremental compilation disabled. Existing compiled dependencies are preserved so unchanged launches remain fast.
-
 
 ---
 
